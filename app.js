@@ -68,14 +68,32 @@ async function addToCart(id, name, price) {
     if (!userToken) return alert("Please login first");
 
     try {
-        await fetch(CART_API_URL, {
+        console.log("Sending to Cart:", { productId: id, name: name, price: price });
+
+        const res = await fetch(CART_API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ productId: id, name: name, price: price })
         });
-        alert("Added to Cart!");
-        loadCart(); // Refresh the counter immediately
-    } catch (e) { console.error("Add Cart Error:", e); }
+
+        // 1. Check if the Server said "OK"
+        if (!res.ok) {
+            const errorText = await res.text();
+            throw new Error(`Server Error (${res.status}): ${errorText}`);
+        }
+
+        // 2. Success!
+        const data = await res.json();
+        console.log("Success:", data);
+        alert("✅ Added to Cart!");
+        
+        // 3. Refresh Counter
+        loadCart(); 
+
+    } catch (e) { 
+        console.error("Add Cart Failed:", e);
+        alert("❌ Failed to add: " + e.message);
+    }
 }
 
 async function loadCart() {
