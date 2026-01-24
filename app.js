@@ -56,7 +56,7 @@ async function loadProducts() {
                 <div class="price">$${p.price}</div>
                 <div class="btn-group">
                     <button class="add-btn" onclick="addToCart('${p.productId}', '${p.name}', ${p.price})">Add to Cart</button>
-                    <button class="buy-btn" onclick="buyNow('${p.productId}')">Buy Now</button>
+                    <button class="buy-btn" onclick="buyNow('${p.productId}', '${p.name}', ${p.price})">Buy Now ⚡</button>
                 </div>
             </div>
         `).join('');
@@ -145,13 +145,48 @@ async function removeFromCart(id) {
 }
 
 // --- ORDER ---
-async function buyNow(productId) {
-    if(confirm("Buy this item instantly?")) {
+async function buyNow(productId, productName, price) {
+    if (!userToken) return alert("Please Sign In first!");
+
+    // 1. Get User Details from Token
+    // We decode the token to find out who is logged in
+    const payload = JSON.parse(atob(userToken.split('.')[1]));
+    const userName = payload['cognito:username'] || "Valued Customer";
+    const userEmail = payload['email'];
+
+    // 2. Ask for Address (The "Smart Path")
+    const address = prompt("📦 Please enter your Shipping Address:", "APIIT City Campus, Colombo");
+    
+    if (!address) return; // Stop if user pressed Cancel
+    if (!confirm(`Confirm purchase of ${productName} for $${price}?`)) return;
+
+    try {
+        console.log("Sending Order...", { productId, address, userEmail });
+
         const res = await fetch(ORDER_API_URL, {
             method: "POST",
-            body: JSON.stringify({ productId: productId, quantity: 1, userId: "user-from-token" })
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+                productId: productId,
+                name: productName,
+                price: price,
+                userId: payload.sub, // Unique User ID from AWS
+                userName: userName,
+                userEmail: userEmail,
+                address: address 
+            })
         });
-        alert(res.ok ? "Order Success!" : "Order Failed");
+
+        if (res.ok) {
+            const data = await res.json();
+            alert(`✅ Order Placed! \n\nOrder ID: ${data.orderId}\nCheck your email (${userEmail}) for the receipt.`);
+        } else {
+            const err = await res.text();
+            alert("❌ Order Failed: " + err);
+        }
+    } catch (e) { 
+        console.error("Order Error:", e);
+        alert("Network Error: " + e.message);
     }
 }
 
