@@ -45,3 +45,25 @@ body { background-color: #f4f6f8; color: #333; }
 .cart-list { background: white; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
 .cart-item { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
 .checkout-btn { background: #007185; color: white; width: 100%; padding: 15px; font-size: 1.1rem; border: none; border-radius: 4px; cursor: pointer; }
+
+
+/* Shared Button Styles */
+.add-btn, .buy-btn {
+    width: 100%;
+    padding: 12px;
+    margin-top: 10px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: bold;
+    color: white;
+    transition: background 0.2s;
+}
+
+/* Specific Colors */
+.add-btn { background: #232f3e; } /* Dark Blue */
+.add-btn:hover { background: #37475a; }
+
+.buy-btn { background: #007185; } /* Teal */
+.buy-btn:hover { background: #005a6a; }
