@@ -1,7 +1,7 @@
 // --- CONFIGURATION ---
 const CART_API_URL = "https://7fqnwxqun1.execute-api.eu-north-1.amazonaws.com/cart";
 const ORDER_API_URL = "https://qidmv28lt5.execute-api.eu-north-1.amazonaws.com/default/OrderService";
-const PRODUCT_API_URL = "https://pvz4zn2pff.execute-api.eu-north-1.amazonaws.com/default/ProductService"; // ⚠️ PASTE YOUR PRODUCT URL HERE
+const PRODUCT_API_URL = "https://pvz4zn2pff.execute-api.eu-north-1.amazonaws.com/default/ProductService"; 
 
 const COGNITO_DOMAIN = "https://eu-north-15qqenyeuq.auth.eu-north-1.amazoncognito.com";
 const CLIENT_ID = "7ruffih541m75ibvhbg5gamtle"; 
@@ -11,43 +11,46 @@ let userToken = null;
 
 // --- INITIALIZE ---
 window.onload = async () => {
-    // 1. Check if we just came back from Cognito with a token
     const hash = window.location.hash;
     if (hash && hash.includes("id_token")) {
         const params = new URLSearchParams(hash.substring(1));
         userToken = params.get("id_token");
         localStorage.setItem("userToken", userToken);
-        window.history.replaceState({}, document.title, "."); // Remove token from URL bar
+        window.history.replaceState({}, document.title, "."); 
     } else {
-        // 2. Or check if we already have it saved
         userToken = localStorage.getItem("userToken");
     }
 
-    // 3. Security Guard: If no token, kick them back to index.html
     if (!userToken) {
         window.location.href = LOGIN_PAGE;
         return;
     }
 
-    // 4. Load Data
     loadProducts();
-    loadCart(); // <--- This runs immediately to update the number!
+    loadCart(); 
 };
 
-
+// --- HELPER: Get Real User ID ---
+function getUserId() {
+    if (!userToken) return null;
+    try {
+        const payload = JSON.parse(atob(userToken.split('.')[1]));
+        return payload.sub; // Unique User ID
+    } catch (e) { return "guest"; }
+}
 
 // --- LOGOUT ---
 function handleLogout() {
     localStorage.removeItem("userToken");
-    // Redirect to Cognito Logout, then back to Index
     window.location.href = `${COGNITO_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${LOGIN_PAGE}`;
 }
 
-// --- PRODUCTS ---
+// --- PRODUCTS (I kept your working version!) ---
 async function loadProducts() {
     try {
         const res = await fetch(PRODUCT_API_URL);
         const data = await res.json();
+        // This line was the key! Keeping it safe:
         const products = data.products ? data.products : data; 
 
         document.getElementById("product-grid").innerHTML = products.map(p => `
@@ -65,31 +68,30 @@ async function loadProducts() {
     } catch (e) { console.error("Error loading products:", e); }
 }
 
-// --- CART (FIXED) ---
+// --- CART (UPDATED FOR PRIVACY) ---
+
+// 1. ADD TO CART (Sends userId)
 async function addToCart(id, name, price) {
     if (!userToken) return alert("Please login first");
+    const userId = getUserId(); // <--- NEW
 
     try {
-        console.log("Sending to Cart:", { productId: id, name: name, price: price });
+        console.log("Sending to Cart:", { userId, productId: id });
 
         const res = await fetch(CART_API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productId: id, name: name, price: price })
+            body: JSON.stringify({ 
+                userId: userId,    // <--- Sending Real ID
+                productId: id, 
+                name: name, 
+                price: price 
+            })
         });
 
-        // 1. Check if the Server said "OK"
-        if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(`Server Error (${res.status}): ${errorText}`);
-        }
+        if (!res.ok) throw new Error("Server Error");
 
-        // 2. Success!
-        const data = await res.json();
-        console.log("Success:", data);
         alert("✅ Added to Cart!");
-        
-        // 3. Refresh Counter
         loadCart(); 
 
     } catch (e) { 
@@ -98,26 +100,29 @@ async function addToCart(id, name, price) {
     }
 }
 
+// 2. LOAD CART (Sends userId in URL)
 async function loadCart() {
-   if (!userToken) return;
+    if (!userToken) return;
+    const userId = getUserId(); // <--- NEW
 
     try {
-        const res = await fetch(CART_API_URL, { method: "GET", cache: "no-store" });
+        // We add ?userId=... to the URL
+        const res = await fetch(`${CART_API_URL}?userId=${userId}`, { 
+            method: "GET", 
+            cache: "no-store" 
+        });
         const items = await res.json();
         
-        // 1. CALCULATE TOTAL QUANTITY (Sum up all the 'quantity' numbers)
-        // If an item has quantity 3, this adds 3.
         let totalCount = 0;
         let totalPrice = 0;
 
         const htmlList = items.map(item => {
-            const qty = item.quantity || 1; // Default to 1 if missing
+            const qty = item.quantity || 1; 
             const price = parseFloat(item.price);
             
             totalCount += qty;
             totalPrice += (price * qty);
 
-            // Show "Product Name (x3)"
             return `
             <div class="cart-item">
                 <div style="flex-grow:1">
@@ -131,40 +136,35 @@ async function loadCart() {
             </div>`;
         }).join('');
 
-        // 2. Update the Navbar Counter
         document.getElementById("cart-count").innerText = totalCount;
-        
-        // 3. Update the List and Total Price
         document.getElementById("cart-items").innerHTML = items.length ? htmlList : "<p>Cart is empty</p>";
         document.getElementById("cart-total").innerText = totalPrice.toFixed(2);
 
     } catch (err) { console.error("Load Cart Error:", err); }
 }
 
-async function removeFromCart(id) {
-    await fetch(`${CART_API_URL}?productId=${id}`, { method: "DELETE" });
-    loadCart(); // Refresh list after delete
+// 3. REMOVE (Sends userId)
+async function removeFromCart(productId) {
+    const userId = getUserId();
+    // ⚠️ Updated to send both ID and ProductID
+    await fetch(`${CART_API_URL}?userId=${userId}&productId=${productId}`, { method: "DELETE" });
+    loadCart(); 
 }
 
-// --- ORDER ---
+// --- ORDER (Your working version) ---
 async function buyNow(productId, productName, price) {
     if (!userToken) return alert("Please Sign In first!");
 
-    // 1. Get User Details from Token
-    // We decode the token to find out who is logged in
     const payload = JSON.parse(atob(userToken.split('.')[1]));
     const userName = payload['cognito:username'] || "Valued Customer";
     const userEmail = payload['email'];
 
-    // 2. Ask for Address (The "Smart Path")
     const address = prompt("📦 Please enter your Shipping Address:", "APIIT City Campus, Colombo");
     
-    if (!address) return; // Stop if user pressed Cancel
+    if (!address) return; 
     if (!confirm(`Confirm purchase of ${productName} for $${price}?`)) return;
 
     try {
-        console.log("Sending Order...", { productId, address, userEmail });
-
         const res = await fetch(ORDER_API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -172,7 +172,7 @@ async function buyNow(productId, productName, price) {
                 productId: productId,
                 name: productName,
                 price: price,
-                userId: payload.sub, // Unique User ID from AWS
+                userId: payload.sub, 
                 userName: userName,
                 userEmail: userEmail,
                 address: address 
