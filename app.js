@@ -1,7 +1,7 @@
 // --- CONFIGURATION ---
 const CART_API_URL = "https://7fqnwxqun1.execute-api.eu-north-1.amazonaws.com/cart";
 const ORDER_API_URL = "https://qidmv28lt5.execute-api.eu-north-1.amazonaws.com/default/OrderService";
-const PRODUCT_API_URL = "PASTE_YOUR_PRODUCT_API_URL_HERE"; // ⚠️ PASTE YOUR PRODUCT URL HERE
+const PRODUCT_API_URL = "https://pvz4zn2pff.execute-api.eu-north-1.amazonaws.com/default/ProductService"; // ⚠️ PASTE YOUR PRODUCT URL HERE
 
 const COGNITO_DOMAIN = "https://eu-north-15qqenyeuq.auth.eu-north-1.amazoncognito.com";
 const CLIENT_ID = "7ruffih541m75ibvhbg5gamtle"; 
