@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloud Retail | Premium Store</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="logo">☁️ Cloud Retail</div>
+        <div class="nav-links">
+            <a href="#" onclick="showHome()">Home</a>
+            <a href="#" onclick="showCart()">Cart <span id="cart-count">0</span></a>
+            <button id="auth-btn" onclick="handleAuth()">Sign In</button>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <h1>Sky High Quality</h1>
+        <p>The best cloud-native merchandise delivered to your doorstep.</p>
+    </header>
+
+    <div class="container">
+        
+        <div id="product-page">
+            <h2>Latest Drops</h2>
+            <div id="product-grid" class="grid">
+                <div class="loading">Loading products...</div>
+            </div>
+        </div>
+
+        <div id="cart-page" class="hidden">
+            <h2>Your Shopping Cart</h2>
+            <div id="cart-items" class="cart-list">
+                <p>Your cart is empty.</p>
+            </div>
+            <div class="cart-summary">
+                <h3>Total: $<span id="cart-total">0.00</span></h3>
+                <button class="checkout-btn" onclick="alert('Checkout Coming in Phase 2!')">Proceed to Checkout</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
