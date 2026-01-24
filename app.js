@@ -97,37 +97,44 @@ async function addToCart(id, name, price) {
 }
 
 async function loadCart() {
-    if (!userToken) return;
+   if (!userToken) return;
 
     try {
-        const res = await fetch(CART_API_URL);
+        const res = await fetch(CART_API_URL, { method: "GET", cache: "no-store" });
         const items = await res.json();
         
-        // 1. Update the Counter in Navbar
-        document.getElementById("cart-count").innerText = items.length;
+        // 1. CALCULATE TOTAL QUANTITY (Sum up all the 'quantity' numbers)
+        // If an item has quantity 3, this adds 3.
+        let totalCount = 0;
+        let totalPrice = 0;
 
-        // 2. Update the Cart Page List
-        const list = document.getElementById("cart-items");
-        if(items.length === 0) {
-            list.innerHTML = "<p>Cart is empty</p>";
-            document.getElementById("cart-total").innerText = "0.00";
-            return;
-        }
+        const htmlList = items.map(item => {
+            const qty = item.quantity || 1; // Default to 1 if missing
+            const price = parseFloat(item.price);
+            
+            totalCount += qty;
+            totalPrice += (price * qty);
 
-        let total = 0;
-        list.innerHTML = items.map(item => {
-            total += parseFloat(item.price);
+            // Show "Product Name (x3)"
             return `
             <div class="cart-item">
-                <span>${item.name || 'Product'}</span>
-                <span>$${item.price}</span>
-                <button onclick="removeFromCart('${item.productId}')" style="color:red;border:none;background:none;cursor:pointer;">
+                <div style="flex-grow:1">
+                    <strong>${item.name}</strong> 
+                    <span style="color:#666; font-size:0.9em"> (x${qty})</span>
+                </div>
+                <span>$${(price * qty).toFixed(2)}</span>
+                <button onclick="removeFromCart('${item.productId}')" style="color:red;border:none;background:none;cursor:pointer;margin-left:10px;">
                     <i class="fas fa-trash"></i>
                 </button>
             </div>`;
         }).join('');
+
+        // 2. Update the Navbar Counter
+        document.getElementById("cart-count").innerText = totalCount;
         
-        document.getElementById("cart-total").innerText = total.toFixed(2);
+        // 3. Update the List and Total Price
+        document.getElementById("cart-items").innerHTML = items.length ? htmlList : "<p>Cart is empty</p>";
+        document.getElementById("cart-total").innerText = totalPrice.toFixed(2);
 
     } catch (err) { console.error("Load Cart Error:", err); }
 }
