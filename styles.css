@@ -67,3 +67,30 @@ body { background-color: #f4f6f8; color: #333; }
 
 .buy-btn { background: #007185; } /* Teal */
 .buy-btn:hover { background: #005a6a; }
+
+/* LANDING PAGE STYLES */
+.landing-container {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #232f3e 0%, #1a1a1a 100%);
+    color: white;
+    text-align: center;
+}
+
+.landing-content h1 { font-size: 3rem; margin-bottom: 1rem; }
+.landing-content p { font-size: 1.2rem; margin-bottom: 2rem; color: #ddd; }
+
+.landing-btn {
+    padding: 15px 40px;
+    font-size: 1.2rem;
+    background: #ff9900;
+    color: #232f3e;
+    border: none;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: transform 0.2s;
+}
+.landing-btn:hover { transform: scale(1.05); background: #ffac33; }

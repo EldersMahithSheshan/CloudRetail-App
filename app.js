@@ -14,25 +14,47 @@ let userToken = null;
 window.onload = async () => {
     checkLogin();
     loadProducts();
-};
+    };
 
 // --- AUTH ---
 function handleAuth() {
     if (userToken) {
+        // Logout: Clear storage and redirect
+        localStorage.removeItem("userToken");
         window.location.href = `${COGNITO_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${REDIRECT_URI}`;
     } else {
+        // Login
         window.location.href = `${COGNITO_DOMAIN}/login?client_id=${CLIENT_ID}&response_type=token&scope=email+openid+profile&redirect_uri=${REDIRECT_URI}`;
     }
 }
 
 function checkLogin() {
+    // 1. Check if token is in URL (coming back from Login)
     const hash = window.location.hash;
     if (hash && hash.includes("id_token")) {
         const params = new URLSearchParams(hash.substring(1));
         userToken = params.get("id_token");
-        window.history.replaceState({}, document.title, ".");
+        // Save token to LocalStorage so it persists on refresh
+        localStorage.setItem("userToken", userToken);
+        window.history.replaceState({}, document.title, "."); // Clean URL
+    } 
+    // 2. Check if token is in LocalStorage (already logged in)
+    else {
+        userToken = localStorage.getItem("userToken");
+    }
+
+    // 3. DECIDE WHICH SCREEN TO SHOW
+    if (userToken) {
+        // User is Logged In -> Show App, Hide Landing
+        document.getElementById("landing-page").classList.add("hidden");
+        document.getElementById("main-app").classList.remove("hidden");
         document.getElementById("auth-btn").innerText = "Sign Out";
         loadCart();
+        loadProducts(); // Only load data if logged in
+    } else {
+        // User is NOT Logged In -> Show Landing, Hide App
+        document.getElementById("landing-page").classList.remove("hidden");
+        document.getElementById("main-app").classList.add("hidden");
     }
 }
 
