@@ -33,6 +33,12 @@ window.onload = async () => {
     loadProducts();
     loadCart(); // <--- This runs immediately to update the number!
 };
+// --- HELPER: Get Real User ID from Token ---
+function getUserId() {
+    if (!userToken) return null;
+    const payload = JSON.parse(atob(userToken.split('.')[1]));
+    return payload.sub; // 'sub' is the unique User ID in Cognito
+}
 
 // --- LOGOUT ---
 function handleLogout() {
@@ -43,57 +49,66 @@ function handleLogout() {
 
 // --- PRODUCTS ---
 async function loadProducts() {
-    try {
-        const res = await fetch(PRODUCT_API_URL);
-        const data = await res.json();
-        const products = data.products ? data.products : data; 
+   if (!userToken) return;
+    const userId = getUserId(); // Get ID
 
-        document.getElementById("product-grid").innerHTML = products.map(p => `
-            <div class="card">
-                <img src="${p.imageUrl || 'https://via.placeholder.com/250'}" alt="${p.name}">
-                <h3>${p.name || 'Cloud T-Shirt'}</h3>
-                <p>${p.description || ''}</p>
-                <div class="price">$${p.price}</div>
-                <div class="btn-group">
-                    <button class="add-btn" onclick="addToCart('${p.productId}', '${p.name}', ${p.price})">Add to Cart</button>
-                    <button class="buy-btn" onclick="buyNow('${p.productId}', '${p.name}', ${p.price})">Buy Now ⚡</button>
+    try {
+        // We add ?userId=... to the URL
+        const res = await fetch(`${CART_API_URL}?userId=${userId}`, { 
+            method: "GET", 
+            cache: "no-store" 
+        });
+        const items = await res.json();
+        
+        let totalCount = 0;
+        let totalPrice = 0;
+
+        const htmlList = items.map(item => {
+            const qty = item.quantity || 1;
+            const price = parseFloat(item.price);
+            totalCount += qty;
+            totalPrice += (price * qty);
+
+            return `
+            <div class="cart-item">
+                <div style="flex-grow:1">
+                    <strong>${item.name}</strong> 
+                    <span style="color:#666; font-size:0.9em"> (x${qty})</span>
                 </div>
-            </div>
-        `).join('');
-    } catch (e) { console.error("Error loading products:", e); }
+                <span>$${(price * qty).toFixed(2)}</span>
+                <button onclick="removeFromCart('${item.productId}')" style="color:red;border:none;background:none;cursor:pointer;margin-left:10px;">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>`;
+        }).join('');
+
+        document.getElementById("cart-count").innerText = totalCount;
+        document.getElementById("cart-items").innerHTML = items.length ? htmlList : "<p>Cart is empty</p>";
+        document.getElementById("cart-total").innerText = totalPrice.toFixed(2);
+
+    } catch (err) { console.error("Load Cart Error:", err); }
 }
 
 // --- CART (FIXED) ---
+// --- 2. ADD TO CART (Send ID in Body) ---
 async function addToCart(id, name, price) {
     if (!userToken) return alert("Please login first");
+    const userId = getUserId(); // Get ID
 
     try {
-        console.log("Sending to Cart:", { productId: id, name: name, price: price });
-
-        const res = await fetch(CART_API_URL, {
+        await fetch(CART_API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ productId: id, name: name, price: price })
+            body: JSON.stringify({ 
+                userId: userId, // <--- SENDING REAL ID
+                productId: id, 
+                name: name, 
+                price: price 
+            })
         });
-
-        // 1. Check if the Server said "OK"
-        if (!res.ok) {
-            const errorText = await res.text();
-            throw new Error(`Server Error (${res.status}): ${errorText}`);
-        }
-
-        // 2. Success!
-        const data = await res.json();
-        console.log("Success:", data);
         alert("✅ Added to Cart!");
-        
-        // 3. Refresh Counter
         loadCart(); 
-
-    } catch (e) { 
-        console.error("Add Cart Failed:", e);
-        alert("❌ Failed to add: " + e.message);
-    }
+    } catch (e) { console.error("Add Cart Error:", e); }
 }
 
 async function loadCart() {
@@ -140,8 +155,9 @@ async function loadCart() {
 }
 
 async function removeFromCart(id) {
-    await fetch(`${CART_API_URL}?productId=${id}`, { method: "DELETE" });
-    loadCart(); // Refresh list after delete
+   const userId = getUserId();
+    await fetch(`${CART_API_URL}?userId=${userId}&productId=${productId}`, { method: "DELETE" });
+    loadCart();
 }
 
 // --- ORDER ---
