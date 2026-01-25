@@ -58,42 +58,33 @@ async function loadProducts() {
         const data = await res.json();
         const products = data.products ? data.products : data; 
 
-        // 1. SAVE DATA GLOBALLY (Fixes the syntax error issue)
+        // Save for later use
         window.allProducts = products;
 
         document.getElementById("product-grid").innerHTML = products.map(p => {
-            // Stock Logic (Default to 10 if missing)
             const stockCount = (p.stock !== undefined) ? p.stock : 10;
             const isOutOfStock = stockCount === 0;
             
-            // Button Styling
-            const btnState = isOutOfStock ? 'disabled style="background-color:grey; cursor:not-allowed;"' : '';
-            const btnTextAdd = isOutOfStock ? 'Sold Out' : 'Add to Cart';
-            const btnTextBuy = isOutOfStock ? 'Sold Out' : 'Buy Now ⚡';
-
-            // Status Text
-            const stockDisplay = isOutOfStock 
-                ? '<span style="color:red; font-weight:bold;">Out of Stock</span>' 
-                : `<span style="color:green;">In Stock: ${stockCount}</span>`;
-
-            // Image Logic (External or Local)
+            // Image Logic
             const imageSrc = p.imageUrl ? p.imageUrl : 'https://via.placeholder.com/250';
 
-            // ⚠️ KEY FIX: We call Wrappers using ONLY the ID
             return `
             <div class="card">
                 <img src="${imageSrc}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/250?text=No+Image'">
                 <h3>${p.name}</h3>
                 <p>${p.description || ''}</p>
                 <div class="price">$${p.price}</div>
-                <div style="margin-bottom:10px; font-size:0.9em;">${stockDisplay}</div>
+                
+                <div id="stock-${p.productId}" style="margin-bottom:10px; font-size:0.9em;">
+                    ${isOutOfStock ? '<span style="color:red; font-weight:bold;">Out of Stock</span>' : `<span style="color:green;">In Stock: ${stockCount}</span>`}
+                </div>
                 
                 <div class="btn-group">
-                    <button class="add-btn" onclick="addToCartWrapper('${p.productId}')" ${btnState}>
-                        ${btnTextAdd}
+                    <button id="btn-add-${p.productId}" class="add-btn" onclick="addToCartWrapper('${p.productId}')" ${isOutOfStock ? 'disabled style="background-color:grey;"' : ''}>
+                        ${isOutOfStock ? 'Sold Out' : 'Add to Cart'}
                     </button>
-                    <button class="buy-btn" onclick="buyNowWrapper('${p.productId}')" ${btnState}>
-                        ${btnTextBuy}
+                    <button class="buy-btn" onclick="buyNowWrapper('${p.productId}')" ${isOutOfStock ? 'disabled style="background-color:grey;"' : ''}>
+                        ${isOutOfStock ? 'Sold Out' : 'Buy Now ⚡'}
                     </button>
                 </div>
             </div>
@@ -105,6 +96,16 @@ async function loadProducts() {
 // --- WRAPPERS (These fix the syntax errors) ---
 function addToCartWrapper(productId) {
     const product = window.allProducts.find(p => p.productId == productId);
+    
+    // ⚠️ NEW: Check if Cart Quantity >= Stock
+    const cartItem = window.cartItems ? window.cartItems.find(c => c.productId == productId) : null;
+    const currentQty = cartItem ? cartItem.quantity : 0;
+
+    if (product && currentQty >= product.stock) {
+        alert(`❌ Max Limit Reached! \nWe only have ${product.stock} in stock.`);
+        return; // Stop here, don't add to cart
+    }
+
     if (product) addToCart(product.productId, product.name, product.price);
 }
 
@@ -147,7 +148,7 @@ async function addToCart(id, name, price) {
 }
 
 async function loadCart() {
-    if (!userToken) return;
+   if (!userToken) return;
     const userId = getUserId(); 
 
     try {
@@ -157,13 +158,15 @@ async function loadCart() {
         });
         const items = await res.json();
         
+        // ⚠️ NEW: Save items globally so we know what user has
+        window.cartItems = items;
+
         let totalCount = 0;
         let totalPrice = 0;
 
         const htmlList = items.map(item => {
             const qty = item.quantity || 1; 
             const price = parseFloat(item.price);
-            
             totalCount += qty;
             totalPrice += (price * qty);
 
@@ -184,6 +187,9 @@ async function loadCart() {
         document.getElementById("cart-items").innerHTML = items.length ? htmlList : "<p>Cart is empty</p>";
         document.getElementById("cart-total").innerText = totalPrice.toFixed(2);
 
+        // ⚠️ NEW: Trigger the UI update
+        updateStockUI();
+
     } catch (err) { console.error("Load Cart Error:", err); }
 }
 
@@ -191,6 +197,40 @@ async function removeFromCart(productId) {
     const userId = getUserId();
     await fetch(`${CART_API_URL}?userId=${userId}&productId=${productId}`, { method: "DELETE" });
     loadCart(); 
+}
+function updateStockUI() {
+    if (!window.allProducts || !window.cartItems) return;
+
+    window.allProducts.forEach(p => {
+        // Calculate Available Stock
+        const cartItem = window.cartItems.find(c => c.productId === p.productId);
+        const qtyInCart = cartItem ? cartItem.quantity : 0;
+        const available = p.stock - qtyInCart;
+
+        // Update Text
+        const stockEl = document.getElementById(`stock-${p.productId}`);
+        if (stockEl) {
+            if (available <= 0) {
+                 stockEl.innerHTML = '<span style="color:red; font-weight:bold;">Limit Reached</span>';
+            } else {
+                 stockEl.innerHTML = `<span style="color:green;">In Stock: ${available}</span> <span style="color:#888;font-size:0.8em;">(${qtyInCart} in cart)</span>`;
+            }
+        }
+
+        // Disable/Enable Button
+        const btn = document.getElementById(`btn-add-${p.productId}`);
+        if (btn) {
+            if (available <= 0) {
+                btn.disabled = true;
+                btn.style.backgroundColor = "grey";
+                btn.innerText = "Max Added";
+            } else {
+                btn.disabled = false;
+                btn.style.backgroundColor = ""; 
+                btn.innerText = "Add to Cart";
+            }
+        }
+    });
 }
 
 // ==========================================
