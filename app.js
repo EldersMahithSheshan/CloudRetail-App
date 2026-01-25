@@ -1,3 +1,7 @@
+// ==========================================
+// 🚀 CLOUD RETAIL - APP CONTROLLER (Final)
+// ==========================================
+
 // --- CONFIGURATION ---
 const CART_API_URL = "https://7fqnwxqun1.execute-api.eu-north-1.amazonaws.com/cart";
 const ORDER_API_URL = "https://qidmv28lt5.execute-api.eu-north-1.amazonaws.com/default/OrderService";
@@ -45,35 +49,77 @@ function handleLogout() {
     window.location.href = `${COGNITO_DOMAIN}/logout?client_id=${CLIENT_ID}&logout_uri=${LOGIN_PAGE}`;
 }
 
-// --- PRODUCTS (I kept your working version!) ---
+// ==========================================
+// 1. PRODUCTS (Safe Version + Stock Logic)
+// ==========================================
 async function loadProducts() {
     try {
         const res = await fetch(PRODUCT_API_URL);
         const data = await res.json();
-        // This line was the key! Keeping it safe:
         const products = data.products ? data.products : data; 
 
-        document.getElementById("product-grid").innerHTML = products.map(p => `
+        // 1. SAVE DATA GLOBALLY (Fixes the syntax error issue)
+        window.allProducts = products;
+
+        document.getElementById("product-grid").innerHTML = products.map(p => {
+            // Stock Logic (Default to 10 if missing)
+            const stockCount = (p.stock !== undefined) ? p.stock : 10;
+            const isOutOfStock = stockCount === 0;
+            
+            // Button Styling
+            const btnState = isOutOfStock ? 'disabled style="background-color:grey; cursor:not-allowed;"' : '';
+            const btnTextAdd = isOutOfStock ? 'Sold Out' : 'Add to Cart';
+            const btnTextBuy = isOutOfStock ? 'Sold Out' : 'Buy Now ⚡';
+
+            // Status Text
+            const stockDisplay = isOutOfStock 
+                ? '<span style="color:red; font-weight:bold;">Out of Stock</span>' 
+                : `<span style="color:green;">In Stock: ${stockCount}</span>`;
+
+            // Image Logic (External or Local)
+            const imageSrc = p.imageUrl ? p.imageUrl : 'https://via.placeholder.com/250';
+
+            // ⚠️ KEY FIX: We call Wrappers using ONLY the ID
+            return `
             <div class="card">
-                <img src="${p.imageUrl || 'https://via.placeholder.com/250'}" alt="${p.name}">
-                <h3>${p.name || 'Cloud T-Shirt'}</h3>
+                <img src="${imageSrc}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/250?text=No+Image'">
+                <h3>${p.name}</h3>
                 <p>${p.description || ''}</p>
                 <div class="price">$${p.price}</div>
+                <div style="margin-bottom:10px; font-size:0.9em;">${stockDisplay}</div>
+                
                 <div class="btn-group">
-                    <button class="add-btn" onclick="addToCart('${p.productId}', '${p.name}', ${p.price})">Add to Cart</button>
-                    <button class="buy-btn" onclick="buyNow('${p.productId}', '${p.name}', ${p.price})">Buy Now ⚡</button>
+                    <button class="add-btn" onclick="addToCartWrapper('${p.productId}')" ${btnState}>
+                        ${btnTextAdd}
+                    </button>
+                    <button class="buy-btn" onclick="buyNowWrapper('${p.productId}')" ${btnState}>
+                        ${btnTextBuy}
+                    </button>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (e) { console.error("Error loading products:", e); }
 }
 
-// --- CART (UPDATED FOR PRIVACY) ---
+// --- WRAPPERS (These fix the syntax errors) ---
+function addToCartWrapper(productId) {
+    const product = window.allProducts.find(p => p.productId == productId);
+    if (product) addToCart(product.productId, product.name, product.price);
+}
 
-// 1. ADD TO CART (Sends userId)
+function buyNowWrapper(productId) {
+    const product = window.allProducts.find(p => p.productId == productId);
+    if (product) buyNow(product.productId, product.name, product.price);
+}
+
+
+// ==========================================
+// 2. CART FUNCTIONS
+// ==========================================
 async function addToCart(id, name, price) {
     if (!userToken) return alert("Please login first");
-    const userId = getUserId(); // <--- NEW
+    const userId = getUserId(); 
 
     try {
         console.log("Sending to Cart:", { userId, productId: id });
@@ -82,7 +128,7 @@ async function addToCart(id, name, price) {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ 
-                userId: userId,    // <--- Sending Real ID
+                userId: userId, 
                 productId: id, 
                 name: name, 
                 price: price 
@@ -100,13 +146,11 @@ async function addToCart(id, name, price) {
     }
 }
 
-// 2. LOAD CART (Sends userId in URL)
 async function loadCart() {
     if (!userToken) return;
-    const userId = getUserId(); // <--- NEW
+    const userId = getUserId(); 
 
     try {
-        // We add ?userId=... to the URL
         const res = await fetch(`${CART_API_URL}?userId=${userId}`, { 
             method: "GET", 
             cache: "no-store" 
@@ -143,26 +187,37 @@ async function loadCart() {
     } catch (err) { console.error("Load Cart Error:", err); }
 }
 
-// 3. REMOVE (Sends userId)
 async function removeFromCart(productId) {
     const userId = getUserId();
-    // ⚠️ Updated to send both ID and ProductID
     await fetch(`${CART_API_URL}?userId=${userId}&productId=${productId}`, { method: "DELETE" });
     loadCart(); 
 }
 
-// --- ORDER (Your working version) ---
-async function buyNow(productId, productName, price) {
-    if (!userToken) return alert("Please Sign In first!");
+// ==========================================
+// 3. ORDER & CHECKOUT ENGINE (Updated)
+// ==========================================
+
+// This function now returns TRUE if success, FALSE if failed
+async function buyNow(productId, productName, price, addressOverride = null) {
+    if (!userToken) {
+        alert("Please Sign In first!");
+        return false;
+    }
 
     const payload = JSON.parse(atob(userToken.split('.')[1]));
     const userName = payload['cognito:username'] || "Valued Customer";
     const userEmail = payload['email'];
 
-    const address = prompt("📦 Please enter your Shipping Address:", "APIIT City Campus, Colombo");
+    // If we have an override (from Checkout loop), use it. Otherwise ask user.
+    let address = addressOverride;
+    if (!address) {
+        address = prompt("📦 Please enter your Shipping Address:", "APIIT City Campus, Colombo");
+    }
     
-    if (!address) return; 
-    if (!confirm(`Confirm purchase of ${productName} for $${price}?`)) return;
+    if (!address) return false; 
+    
+    // Only ask for confirmation for single buys
+    if (!addressOverride && !confirm(`Confirm purchase of ${productName} for $${price}?`)) return false;
 
     try {
         const res = await fetch(ORDER_API_URL, {
@@ -181,16 +236,67 @@ async function buyNow(productId, productName, price) {
 
         if (res.ok) {
             const data = await res.json();
-            alert(`✅ Order Placed! \n\nOrder ID: ${data.orderId}\nCheck your email (${userEmail}) for the receipt.`);
+            if (!addressOverride) {
+                alert(`✅ Order Placed! \n\nOrder ID: ${data.orderId}\nCheck your email (${userEmail}) for the receipt.`);
+            }
+            return true; // SUCCESS
         } else {
             const err = await res.text();
-            alert("❌ Order Failed: " + err);
+            console.error("Order Failed:", err);
+            return false;
         }
     } catch (e) { 
         console.error("Order Error:", e);
-        alert("Network Error: " + e.message);
+        return false;
     }
 }
+
+// --- CHECKOUT CART LOOP ---
+async function checkoutCart() {
+    if (!userToken) return;
+    const userId = getUserId();
+
+    // 1. Get Cart Items
+    const res = await fetch(`${CART_API_URL}?userId=${userId}`, { method: "GET", cache: "no-store" });
+    const items = await res.json();
+
+    if (items.length === 0) return alert("Your cart is empty!");
+
+    // 2. Ask for Address ONCE
+    const address = prompt("📦 Enter Shipping Address for ALL items:", "APIIT City Campus, Colombo");
+    if (!address) return;
+
+    // 3. Loop and Buy
+    let successCount = 0;
+    
+    // Update Button Text
+    const btn = document.getElementById("checkout-btn");
+    if(btn) btn.innerText = "Processing...";
+
+    for (const item of items) {
+        const qty = item.quantity || 1;
+        // Buy item X times based on quantity
+        for (let i = 0; i < qty; i++) {
+             const success = await buyNow(item.productId, item.name, item.price, address);
+             if (success) successCount++;
+        }
+    }
+
+    if(btn) btn.innerText = "Proceed to Checkout";
+
+    // 4. Finish
+    if (successCount > 0) {
+        alert(`✅ Checkout Complete! ${successCount} items ordered.\nCheck your email for receipts.`);
+        // Clear Cart
+        for (const item of items) {
+            await fetch(`${CART_API_URL}?userId=${userId}&productId=${item.productId}`, { method: "DELETE" });
+        }
+        loadCart(); 
+    } else {
+        alert("❌ Checkout failed. Items might be out of stock.");
+    }
+}
+
 
 // --- NAVIGATION ---
 function showCart() { 
