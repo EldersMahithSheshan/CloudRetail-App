@@ -322,13 +322,14 @@ async function checkoutCart() {
     let successCount = 0;
     
     // Update Button Text
-    const btn = document.getElementById("checkout-btn");
+    const btn = document.getElementById("checkout-btn"); // We will add this ID to HTML next
     if(btn) btn.innerText = "Processing...";
 
     for (const item of items) {
         const qty = item.quantity || 1;
         // Buy item X times based on quantity
         for (let i = 0; i < qty; i++) {
+             // Pass 'address' so it doesn't ask again
              const success = await buyNow(item.productId, item.name, item.price, address);
              if (success) successCount++;
         }
@@ -339,11 +340,16 @@ async function checkoutCart() {
     // 4. Finish
     if (successCount > 0) {
         alert(`✅ Checkout Complete! ${successCount} items ordered.\nCheck your email for receipts.`);
-        // Clear Cart
+        
+        // A. Clear Cart
         for (const item of items) {
             await fetch(`${CART_API_URL}?userId=${userId}&productId=${item.productId}`, { method: "DELETE" });
         }
-        loadCart(); 
+        
+        // B. Refresh Data (Crucial Step!)
+        await loadProducts(); // <--- Download new stock levels from DB
+        await loadCart();     // <--- Refresh cart UI (should be empty)
+        
     } else {
         alert("❌ Checkout failed. Items might be out of stock.");
     }
