@@ -178,17 +178,31 @@ async function removeFromCart(productId) {
 }
 
 // --- ORDER (Your working version) ---
-async function buyNow(productId, productName, price) {
-    if (!userToken) return alert("Please Sign In first!");
+async function buyNow(productId, productName, price, addressOverride = null) {
+    console.log("Buy Now clicked:", productId); // Debug line
 
+    if (!userToken) {
+        alert("Please Sign In first!");
+        return false;
+    }
+
+    // 1. Get User Info
     const payload = JSON.parse(atob(userToken.split('.')[1]));
     const userName = payload['cognito:username'] || "Valued Customer";
     const userEmail = payload['email'];
 
-    const address = prompt("📦 Please enter your Shipping Address:", "APIIT City Campus, Colombo");
+    // 2. Address Logic
+    // If we are checking out the whole cart, addressOverride is passed.
+    // If we are buying just one item, we ask the user now.
+    let address = addressOverride;
+    if (!address) {
+        address = prompt("📦 Please enter your Shipping Address:", "APIIT City Campus, Colombo");
+    }
     
-    if (!address) return; 
-    if (!confirm(`Confirm purchase of ${productName} for $${price}?`)) return;
+    if (!address) return false; // Stop if user pressed Cancel
+
+    // 3. Confirmation (Only for single items)
+    if (!addressOverride && !confirm(`Confirm purchase of ${productName} for $${price}?`)) return false;
 
     try {
         const res = await fetch(ORDER_API_URL, {
@@ -198,7 +212,7 @@ async function buyNow(productId, productName, price) {
                 productId: productId,
                 name: productName,
                 price: price,
-                userId: payload.sub, 
+                userId: payload.sub,
                 userName: userName,
                 userEmail: userEmail,
                 address: address 
@@ -207,14 +221,20 @@ async function buyNow(productId, productName, price) {
 
         if (res.ok) {
             const data = await res.json();
-            alert(`✅ Order Placed! \n\nOrder ID: ${data.orderId}\nCheck your email (${userEmail}) for the receipt.`);
+            // Show success message only for single buys (to avoid spamming alerts during cart checkout)
+            if (!addressOverride) {
+                alert(`✅ Order Placed! \n\nOrder ID: ${data.orderId}\nCheck your email (${userEmail}) for the receipt.`);
+            }
+            return true; // Success!
         } else {
             const err = await res.text();
             alert("❌ Order Failed: " + err);
+            return false;
         }
     } catch (e) { 
         console.error("Order Error:", e);
         alert("Network Error: " + e.message);
+        return false;
     }
 }
 
