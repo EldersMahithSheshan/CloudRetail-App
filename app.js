@@ -50,47 +50,21 @@ async function loadProducts() {
     try {
         const res = await fetch(PRODUCT_API_URL);
         const data = await res.json();
+        // This line was the key! Keeping it safe:
         const products = data.products ? data.products : data; 
 
-        document.getElementById("product-grid").innerHTML = products.map(p => {
-            // 1. Stock Logic
-            // If stock is missing (undefined), we assume it's In Stock (safe fallback)
-            const stockCount = (p.stock !== undefined) ? p.stock : 10;
-            const isOutOfStock = stockCount === 0;
-            
-            // 2. Button State (Disabled if 0)
-            const btnState = isOutOfStock ? 'disabled style="background-color:grey; cursor:not-allowed;"' : '';
-            const btnTextAdd = isOutOfStock ? 'Sold Out' : 'Add to Cart';
-            const btnTextBuy = isOutOfStock ? 'Sold Out' : 'Buy Now ⚡';
-
-            // 3. Stock Display Text
-            const stockDisplay = isOutOfStock 
-                ? '<span style="color:red; font-weight:bold;">Out of Stock</span>' 
-                : `<span style="color:green;">In Stock: ${stockCount}</span>`;
-
-            // 4. Image Logic (Local vs External)
-            // If p.imageUrl starts with "http", use it. Otherwise, assume it's a local file.
-            const imageSrc = p.imageUrl ? p.imageUrl : 'https://via.placeholder.com/250';
-
-            return `
+        document.getElementById("product-grid").innerHTML = products.map(p => `
             <div class="card">
-                <img src="${imageSrc}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/250?text=No+Image'">
-                <h3>${p.name}</h3>
+                <img src="${p.imageUrl || 'https://via.placeholder.com/250'}" alt="${p.name}">
+                <h3>${p.name || 'Cloud T-Shirt'}</h3>
                 <p>${p.description || ''}</p>
                 <div class="price">$${p.price}</div>
-                <div style="margin-bottom:10px; font-size:0.9em;">${stockDisplay}</div>
-                
                 <div class="btn-group">
-                    <button class="add-btn" onclick="addToCart('${p.productId}', '${p.name}', ${p.price})"${btnState}>
-                        ${btnTextAdd}
-                    </button>
-                    <button class="buy-btn" onclick="buyNow('${p.productId}', '${p.name}', ${p.price}')" ${btnState}>
-                        ${btnTextBuy}
-                    </button>
+                    <button class="add-btn" onclick="addToCart('${p.productId}', '${p.name}', ${p.price})">Add to Cart</button>
+                    <button class="buy-btn" onclick="buyNow('${p.productId}', '${p.name}', ${p.price})">Buy Now ⚡</button>
                 </div>
             </div>
-            `;
-        }).join('');
+        `).join('');
     } catch (e) { console.error("Error loading products:", e); }
 }
 
@@ -178,31 +152,17 @@ async function removeFromCart(productId) {
 }
 
 // --- ORDER (Your working version) ---
-async function buyNow(productId, productName, price, addressOverride = null) {
-    console.log("Buy Now clicked:", productId); // Debug line
+async function buyNow(productId, productName, price) {
+    if (!userToken) return alert("Please Sign In first!");
 
-    if (!userToken) {
-        alert("Please Sign In first!");
-        return false;
-    }
-
-    // 1. Get User Info
     const payload = JSON.parse(atob(userToken.split('.')[1]));
     const userName = payload['cognito:username'] || "Valued Customer";
     const userEmail = payload['email'];
 
-    // 2. Address Logic
-    // If we are checking out the whole cart, addressOverride is passed.
-    // If we are buying just one item, we ask the user now.
-    let address = addressOverride;
-    if (!address) {
-        address = prompt("📦 Please enter your Shipping Address:", "APIIT City Campus, Colombo");
-    }
+    const address = prompt("📦 Please enter your Shipping Address:", "APIIT City Campus, Colombo");
     
-    if (!address) return false; // Stop if user pressed Cancel
-
-    // 3. Confirmation (Only for single items)
-    if (!addressOverride && !confirm(`Confirm purchase of ${productName} for $${price}?`)) return false;
+    if (!address) return; 
+    if (!confirm(`Confirm purchase of ${productName} for $${price}?`)) return;
 
     try {
         const res = await fetch(ORDER_API_URL, {
@@ -212,7 +172,7 @@ async function buyNow(productId, productName, price, addressOverride = null) {
                 productId: productId,
                 name: productName,
                 price: price,
-                userId: payload.sub,
+                userId: payload.sub, 
                 userName: userName,
                 userEmail: userEmail,
                 address: address 
@@ -221,20 +181,14 @@ async function buyNow(productId, productName, price, addressOverride = null) {
 
         if (res.ok) {
             const data = await res.json();
-            // Show success message only for single buys (to avoid spamming alerts during cart checkout)
-            if (!addressOverride) {
-                alert(`✅ Order Placed! \n\nOrder ID: ${data.orderId}\nCheck your email (${userEmail}) for the receipt.`);
-            }
-            return true; // Success!
+            alert(`✅ Order Placed! \n\nOrder ID: ${data.orderId}\nCheck your email (${userEmail}) for the receipt.`);
         } else {
             const err = await res.text();
             alert("❌ Order Failed: " + err);
-            return false;
         }
     } catch (e) { 
         console.error("Order Error:", e);
         alert("Network Error: " + e.message);
-        return false;
     }
 }
 
