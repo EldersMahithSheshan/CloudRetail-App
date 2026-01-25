@@ -58,14 +58,11 @@ async function loadProducts() {
         const data = await res.json();
         const products = data.products ? data.products : data; 
 
-        // Save for later use
         window.allProducts = products;
 
         document.getElementById("product-grid").innerHTML = products.map(p => {
             const stockCount = (p.stock !== undefined) ? p.stock : 10;
             const isOutOfStock = stockCount === 0;
-            
-            // Image Logic
             const imageSrc = p.imageUrl ? p.imageUrl : 'https://via.placeholder.com/250';
 
             return `
@@ -83,7 +80,7 @@ async function loadProducts() {
                     <button id="btn-add-${p.productId}" class="add-btn" onclick="addToCartWrapper('${p.productId}')" ${isOutOfStock ? 'disabled style="background-color:grey;"' : ''}>
                         ${isOutOfStock ? 'Sold Out' : 'Add to Cart'}
                     </button>
-                    <button class="buy-btn" onclick="buyNowWrapper('${p.productId}')" ${isOutOfStock ? 'disabled style="background-color:grey;"' : ''}>
+                    <button id="btn-buy-${p.productId}" class="buy-btn" onclick="buyNowWrapper('${p.productId}')" ${isOutOfStock ? 'disabled style="background-color:grey;"' : ''}>
                         ${isOutOfStock ? 'Sold Out' : 'Buy Now ⚡'}
                     </button>
                 </div>
@@ -199,15 +196,14 @@ async function removeFromCart(productId) {
     loadCart(); 
 }
 function updateStockUI() {
-    if (!window.allProducts || !window.cartItems) return;
+   if (!window.allProducts || !window.cartItems) return;
 
     window.allProducts.forEach(p => {
-        // Calculate Available Stock
         const cartItem = window.cartItems.find(c => c.productId === p.productId);
         const qtyInCart = cartItem ? cartItem.quantity : 0;
         const available = p.stock - qtyInCart;
 
-        // Update Text
+        // 1. Update Text
         const stockEl = document.getElementById(`stock-${p.productId}`);
         if (stockEl) {
             if (available <= 0) {
@@ -217,17 +213,33 @@ function updateStockUI() {
             }
         }
 
-        // Disable/Enable Button
-        const btn = document.getElementById(`btn-add-${p.productId}`);
-        if (btn) {
-            if (available <= 0) {
-                btn.disabled = true;
-                btn.style.backgroundColor = "grey";
-                btn.innerText = "Max Added";
-            } else {
-                btn.disabled = false;
-                btn.style.backgroundColor = ""; 
-                btn.innerText = "Add to Cart";
+        // 2. Disable "Add to Cart" AND "Buy Now"
+        const btnAdd = document.getElementById(`btn-add-${p.productId}`);
+        const btnBuy = document.getElementById(`btn-buy-${p.productId}`); // <--- NEW
+
+        if (available <= 0) {
+            // Case: Limit Reached
+            if (btnAdd) {
+                btnAdd.disabled = true;
+                btnAdd.style.backgroundColor = "grey";
+                btnAdd.innerText = "Max Added";
+            }
+            if (btnBuy) {
+                btnBuy.disabled = true;
+                btnBuy.style.backgroundColor = "grey";
+                btnBuy.innerText = "Max Added";
+            }
+        } else {
+            // Case: Stock Available
+            if (btnAdd) {
+                btnAdd.disabled = false;
+                btnAdd.style.backgroundColor = ""; 
+                btnAdd.innerText = "Add to Cart";
+            }
+            if (btnBuy) {
+                btnBuy.disabled = false;
+                btnBuy.style.backgroundColor = ""; 
+                btnBuy.innerText = "Buy Now ⚡";
             }
         }
     });
