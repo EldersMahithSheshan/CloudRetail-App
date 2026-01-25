@@ -47,24 +47,35 @@ function handleLogout() {
 
 // --- PRODUCTS (I kept your working version!) ---
 async function loadProducts() {
-    try {
+   try {
         const res = await fetch(PRODUCT_API_URL);
         const data = await res.json();
-        // This line was the key! Keeping it safe:
         const products = data.products ? data.products : data; 
 
-        document.getElementById("product-grid").innerHTML = products.map(p => `
+        document.getElementById("product-grid").innerHTML = products.map(p => {
+            // Logic to handle stock
+            const isOutOfStock = p.stock === 0;
+            const stockText = isOutOfStock ? '<span style="color:red; font-weight:bold;">Out of Stock</span>' : `In Stock: ${p.stock}`;
+            const btnState = isOutOfStock ? 'disabled style="background-color:grey; cursor:not-allowed;"' : '';
+
+            return `
             <div class="card">
-                <img src="${p.imageUrl || 'https://via.placeholder.com/250'}" alt="${p.name}">
-                <h3>${p.name || 'Cloud T-Shirt'}</h3>
-                <p>${p.description || ''}</p>
+                <img src="${p.imageUrl}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/250?text=No+Image'">
+                <h3>${p.name}</h3>
                 <div class="price">$${p.price}</div>
+                <div style="margin-bottom:10px; font-size:0.9em;">${stockText}</div>
+                
                 <div class="btn-group">
-                    <button class="add-btn" onclick="addToCart('${p.productId}', '${p.name}', ${p.price})">Add to Cart</button>
-                    <button class="buy-btn" onclick="buyNow('${p.productId}', '${p.name}', ${p.price})">Buy Now ⚡</button>
+                    <button class="add-btn" onclick="addToCart('${p.productId}', '${p.name}', ${p.price}')" ${btnState}>
+                        ${isOutOfStock ? 'Sold Out' : 'Add to Cart'}
+                    </button>
+                    <button class="buy-btn" onclick="buyNow('${p.productId}', '${p.name}', ${p.price}')" ${btnState}>
+                        ${isOutOfStock ? 'Sold Out' : 'Buy Now ⚡'}
+                    </button>
                 </div>
             </div>
-        `).join('');
+            `;
+        }).join('');
     } catch (e) { console.error("Error loading products:", e); }
 }
 
