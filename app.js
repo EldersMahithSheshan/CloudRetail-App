@@ -47,30 +47,45 @@ function handleLogout() {
 
 // --- PRODUCTS (I kept your working version!) ---
 async function loadProducts() {
-   try {
+    try {
         const res = await fetch(PRODUCT_API_URL);
         const data = await res.json();
         const products = data.products ? data.products : data; 
 
         document.getElementById("product-grid").innerHTML = products.map(p => {
-            // Logic to handle stock
-            const isOutOfStock = p.stock === 0;
-            const stockText = isOutOfStock ? '<span style="color:red; font-weight:bold;">Out of Stock</span>' : `In Stock: ${p.stock}`;
+            // 1. Stock Logic
+            // If stock is missing (undefined), we assume it's In Stock (safe fallback)
+            const stockCount = (p.stock !== undefined) ? p.stock : 10;
+            const isOutOfStock = stockCount === 0;
+            
+            // 2. Button State (Disabled if 0)
             const btnState = isOutOfStock ? 'disabled style="background-color:grey; cursor:not-allowed;"' : '';
+            const btnTextAdd = isOutOfStock ? 'Sold Out' : 'Add to Cart';
+            const btnTextBuy = isOutOfStock ? 'Sold Out' : 'Buy Now ⚡';
+
+            // 3. Stock Display Text
+            const stockDisplay = isOutOfStock 
+                ? '<span style="color:red; font-weight:bold;">Out of Stock</span>' 
+                : `<span style="color:green;">In Stock: ${stockCount}</span>`;
+
+            // 4. Image Logic (Local vs External)
+            // If p.imageUrl starts with "http", use it. Otherwise, assume it's a local file.
+            const imageSrc = p.imageUrl ? p.imageUrl : 'https://via.placeholder.com/250';
 
             return `
             <div class="card">
-                <img src="${p.imageUrl}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/250?text=No+Image'">
+                <img src="${imageSrc}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/250?text=No+Image'">
                 <h3>${p.name}</h3>
+                <p>${p.description || ''}</p>
                 <div class="price">$${p.price}</div>
-                <div style="margin-bottom:10px; font-size:0.9em;">${stockText}</div>
+                <div style="margin-bottom:10px; font-size:0.9em;">${stockDisplay}</div>
                 
                 <div class="btn-group">
-                    <button class="add-btn" onclick="addToCart('${p.productId}', '${p.name}', ${p.price}')" ${btnState}>
-                        ${isOutOfStock ? 'Sold Out' : 'Add to Cart'}
+                    <button class="add-btn" onclick="addToCart('${p.productId}', '${p.name}', ${p.price})"${btnState}>
+                        ${btnTextAdd}
                     </button>
                     <button class="buy-btn" onclick="buyNow('${p.productId}', '${p.name}', ${p.price}')" ${btnState}>
-                        ${isOutOfStock ? 'Sold Out' : 'Buy Now ⚡'}
+                        ${btnTextBuy}
                     </button>
                 </div>
             </div>
