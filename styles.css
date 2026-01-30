@@ -94,3 +94,30 @@ body { background-color: #f4f6f8; color: #333; }
     transition: transform 0.2s;
 }
 .landing-btn:hover { transform: scale(1.05); background: #ffac33; }
+
+/* NAVBAR STYLES */
+    nav {
+        background-color: #232f3e;
+        color: white;
+        padding: 15px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .logo { font-size: 1.5em; font-weight: bold; }
+    .nav-links a { color: white; text-decoration: none; margin-left: 20px; font-size: 1.1em; cursor: pointer; }
+    .nav-links a:hover { color: #ff9900; }
+    
+    /* SIGN OUT BUTTON */
+    #auth-btn {
+        background-color: #ff9900;
+        border: none;
+        padding: 8px 15px;
+        color: black;
+        font-weight: bold;
+        cursor: pointer;
+        border-radius: 5px;
+        margin-left: 20px;
+    }
+    #auth-btn:hover { background-color: #e68a00; }

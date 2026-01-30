@@ -36,12 +36,12 @@ window.onload = async () => {
 
     // 3. ROUTING: Which page are we on?
     if (window.location.pathname.includes("product.html")) {
-       loadProductDetail(); 
+        loadProductDetail(); // We are on the Detail Page
     } else {
-        loadProducts(); 
-        
-        // ⚠️ NEW: Check if we need to open the cart immediately
-        if (window.location.hash === "#cart") {
+        loadProducts(); // We are on the Home Page
+    }
+
+    if (window.location.hash === "#cart") {
             showCart(); // Open the cart view
             window.history.replaceState({}, document.title, "."); // Clean the URL
         }
@@ -165,7 +165,7 @@ async function loadProductDetail() {
             </div>
         `;
 
-      document.getElementById("product-detail-container").innerHTML = html;
+        document.getElementById("product-detail-container").innerHTML = html;
         
         // ⚠️ NEW: Force the Stock Text to update immediately
         // We pass the specific product ID to be efficient
