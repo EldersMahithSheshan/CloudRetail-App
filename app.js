@@ -168,9 +168,7 @@ async function loadProductDetail() {
 
         document.getElementById("product-detail-container").innerHTML = html;
         
-        if (window.cartItems) {
-            updateStockUI(); 
-        }
+        await loadCart();
 
     } catch (e) {
         console.error(e);
@@ -228,13 +226,19 @@ async function addToCart(id, name, price) {
 
         if (!res.ok) throw new Error("Server Error");
 
-        // Silent update
         console.log("Added to cart, refreshing UI...");
+        
+        // 1. Load fresh cart data
         await loadCart(); 
+        
+        // 2. ⚠️ FORCE UI UPDATE (Double check to remove 'updating...' text)
+        updateStockUI();
 
     } catch (e) { 
         console.error("Add Cart Failed:", e);
         alert("❌ Failed to add: " + e.message);
+        // If failed, reset the UI text
+        loadProducts(); 
     }
 }
 
@@ -297,7 +301,7 @@ function updateStockUI() {
         const qtyInCart = cartItem ? cartItem.quantity : 0;
         const available = p.stock - qtyInCart;
 
-        // 1. Update Text
+        // 1. Update Text (Works for Home Grid AND Detail Page)
         const stockEl = document.getElementById(`stock-${p.productId}`);
         if (stockEl) {
             if (available <= 0) {
