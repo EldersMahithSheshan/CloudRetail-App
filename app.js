@@ -1,5 +1,5 @@
 // ==========================================
-// 🚀 CLOUD RETAIL - APP CONTROLLER (Final)
+// 🚀 CLOUD RETAIL - APP CONTROLLER (Final Fixed)
 // ==========================================
 
 // --- CONFIGURATION ---
@@ -42,9 +42,9 @@ window.onload = async () => {
     }
 
     if (window.location.hash === "#cart") {
-            showCart(); // Open the cart view
-            window.history.replaceState({}, document.title, "."); // Clean the URL
-        }
+        showCart(); // Open the cart view
+        window.history.replaceState({}, document.title, "."); // Clean the URL
+    }
 };
 
 // --- HELPER: Get Real User ID ---
@@ -103,12 +103,17 @@ async function loadProducts() {
             </div>
             `;
         }).join('');
+
+        // ⚠️ NEW: Force update UI immediately in case Cart loaded first
+        if (window.cartItems) {
+            updateStockUI();
+        }
+
     } catch (e) { console.error("Error loading products:", e); }
 }
 
 // --- PRODUCT DETAIL PAGE LOGIC ---
 async function loadProductDetail() {
-    // 1. Get ID from URL
     const params = new URLSearchParams(window.location.search);
     const productId = params.get("id");
 
@@ -118,16 +123,12 @@ async function loadProductDetail() {
     }
 
     try {
-        // 2. Fetch Data (Reuse existing API)
-        
         const res = await fetch(PRODUCT_API_URL, { cache: "no-store" });
         const data = await res.json();
         const products = data.products ? data.products : data;
         
-        // Save globally so Wrappers work
         window.allProducts = products;
 
-        // 3. Find the specific product
         const p = products.find(item => item.productId === productId);
 
         if (!p) {
@@ -137,7 +138,6 @@ async function loadProductDetail() {
 
         document.getElementById("loading").style.display = "none";
 
-        // 4. Render Details
         const stockCount = (p.stock !== undefined) ? p.stock : 10;
         const isOutOfStock = stockCount === 0;
         const imageSrc = p.imageUrl ? p.imageUrl : 'https://via.placeholder.com/400';
@@ -168,8 +168,6 @@ async function loadProductDetail() {
 
         document.getElementById("product-detail-container").innerHTML = html;
         
-        // ⚠️ NEW: Force the Stock Text to update immediately
-        // We pass the specific product ID to be efficient
         if (window.cartItems) {
             updateStockUI(); 
         }
@@ -180,7 +178,7 @@ async function loadProductDetail() {
     }
 }
 
-// --- WRAPPERS (These fix the syntax errors) ---
+// --- WRAPPERS (Updated for Instant Feedback) ---
 function addToCartWrapper(productId) {
     const product = window.allProducts.find(p => p.productId == productId);
     
@@ -195,16 +193,15 @@ function addToCartWrapper(productId) {
 
     // ✅ OPTIMISTIC UPDATE: Update the screen IMMEDIATELY (Before waiting for AWS)
     if (product) {
-        // 1. Calculate new math locally
         const newAvailable = product.stock - (currentQty + 1);
         
-        // 2. Find the text element (Works on Home AND Product Page)
+        // Find the text element (Works on Home AND Product Page)
         const stockEl = document.getElementById(`stock-${productId}`);
         if (stockEl) {
              stockEl.innerHTML = `<span style="color:green;">In Stock: ${newAvailable}</span> <span style="color:#888;font-size:0.8em;">(updating...)</span>`;
         }
 
-        // 3. Send the real request
+        // Send the real request
         addToCart(product.productId, product.name, product.price);
     }
 }
@@ -231,11 +228,9 @@ async function addToCart(id, name, price) {
 
         if (!res.ok) throw new Error("Server Error");
 
-        // ⚠️ REMOVED: alert("✅ Added to Cart!"); 
-        // This allows the code to continue IMMEDIATELY
-        
+        // Silent update
         console.log("Added to cart, refreshing UI...");
-        await loadCart(); // This will fix the "Updating..." text
+        await loadCart(); 
 
     } catch (e) { 
         console.error("Add Cart Failed:", e);
@@ -254,7 +249,6 @@ async function loadCart() {
         });
         const items = await res.json();
         
-        // ⚠️ NEW: Save items globally so we know what user has
         window.cartItems = items;
 
         let totalCount = 0;
@@ -283,7 +277,6 @@ async function loadCart() {
         document.getElementById("cart-items").innerHTML = items.length ? htmlList : "<p>Cart is empty</p>";
         document.getElementById("cart-total").innerText = totalPrice.toFixed(2);
 
-        // ⚠️ NEW: Trigger the UI update
         updateStockUI();
 
     } catch (err) { console.error("Load Cart Error:", err); }
@@ -294,6 +287,8 @@ async function removeFromCart(productId) {
     await fetch(`${CART_API_URL}?userId=${userId}&productId=${productId}`, { method: "DELETE" });
     loadCart(); 
 }
+
+// --- SMART STOCK UPDATE ---
 function updateStockUI() {
    if (!window.allProducts || !window.cartItems) return;
 
@@ -314,10 +309,9 @@ function updateStockUI() {
 
         // 2. Disable "Add to Cart" AND "Buy Now"
         const btnAdd = document.getElementById(`btn-add-${p.productId}`);
-        const btnBuy = document.getElementById(`btn-buy-${p.productId}`); // <--- NEW
+        const btnBuy = document.getElementById(`btn-buy-${p.productId}`);
 
         if (available <= 0) {
-            // Case: Limit Reached
             if (btnAdd) {
                 btnAdd.disabled = true;
                 btnAdd.style.backgroundColor = "grey";
@@ -329,7 +323,6 @@ function updateStockUI() {
                 btnBuy.innerText = "Max Added";
             }
         } else {
-            // Case: Stock Available
             if (btnAdd) {
                 btnAdd.disabled = false;
                 btnAdd.style.backgroundColor = ""; 
@@ -348,7 +341,6 @@ function updateStockUI() {
 // 3. ORDER & CHECKOUT ENGINE (Updated)
 // ==========================================
 
-// This function now returns TRUE if success, FALSE if failed
 async function buyNow(productId, productName, price, addressOverride = null) {
     if (!userToken) {
         alert("Please Sign In first!");
@@ -359,7 +351,6 @@ async function buyNow(productId, productName, price, addressOverride = null) {
     const userName = payload['cognito:username'] || "Valued Customer";
     const userEmail = payload['email'];
 
-    // If we have an override (from Checkout loop), use it. Otherwise ask user.
     let address = addressOverride;
     if (!address) {
         address = prompt("📦 Please enter your Shipping Address:", "APIIT City Campus, Colombo");
@@ -367,7 +358,6 @@ async function buyNow(productId, productName, price, addressOverride = null) {
     
     if (!address) return false; 
     
-    // Only ask for confirmation for single buys
     if (!addressOverride && !confirm(`Confirm purchase of ${productName} for $${price}?`)) return false;
 
     try {
@@ -390,7 +380,7 @@ async function buyNow(productId, productName, price, addressOverride = null) {
             if (!addressOverride) {
                 alert(`✅ Order Placed! \n\nOrder ID: ${data.orderId}\nCheck your email (${userEmail}) for the receipt.`);
             }
-            return true; // SUCCESS
+            return true; 
         } else {
             const err = await res.text();
             console.error("Order Failed:", err);
@@ -402,33 +392,26 @@ async function buyNow(productId, productName, price, addressOverride = null) {
     }
 }
 
-// --- CHECKOUT CART LOOP ---
 async function checkoutCart() {
     if (!userToken) return;
     const userId = getUserId();
 
-    // 1. Get Cart Items
     const res = await fetch(`${CART_API_URL}?userId=${userId}`, { method: "GET", cache: "no-store" });
     const items = await res.json();
 
     if (items.length === 0) return alert("Your cart is empty!");
 
-    // 2. Ask for Address ONCE
     const address = prompt("📦 Enter Shipping Address for ALL items:", "APIIT City Campus, Colombo");
     if (!address) return;
 
-    // 3. Loop and Buy
     let successCount = 0;
     
-    // Update Button Text
-    const btn = document.getElementById("checkout-btn"); // We will add this ID to HTML next
+    const btn = document.getElementById("checkout-btn"); 
     if(btn) btn.innerText = "Processing...";
 
     for (const item of items) {
         const qty = item.quantity || 1;
-        // Buy item X times based on quantity
         for (let i = 0; i < qty; i++) {
-             // Pass 'address' so it doesn't ask again
              const success = await buyNow(item.productId, item.name, item.price, address);
              if (success) successCount++;
         }
@@ -436,18 +419,15 @@ async function checkoutCart() {
 
     if(btn) btn.innerText = "Proceed to Checkout";
 
-    // 4. Finish
     if (successCount > 0) {
         alert(`✅ Checkout Complete! ${successCount} items ordered.\nCheck your email for receipts.`);
         
-        // A. Clear Cart
         for (const item of items) {
             await fetch(`${CART_API_URL}?userId=${userId}&productId=${item.productId}`, { method: "DELETE" });
         }
         
-        // B. Refresh Data (Crucial Step!)
-        await loadProducts(); // <--- Download new stock levels from DB
-        await loadCart();     // <--- Refresh cart UI (should be empty)
+        await loadProducts(); 
+        await loadCart();     
         
     } else {
         alert("❌ Checkout failed. Items might be out of stock.");
@@ -457,13 +437,10 @@ async function checkoutCart() {
 
 // --- NAVIGATION ---
 function showCart() { 
-    // If we are on the Product Detail page, go back to Home first!
     if (window.location.pathname.includes("product.html")) {
-        window.location.href = "index.html#cart"; // Add #cart tag to URL
+        window.location.href = "index.html#cart"; 
         return;
     }
-
-    // Normal behavior (on Home Page)
     document.getElementById("product-page").classList.add("hidden"); 
     document.getElementById("cart-page").classList.remove("hidden");
 }
