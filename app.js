@@ -36,10 +36,15 @@ window.onload = async () => {
 
     // 3. ROUTING: Which page are we on?
     if (window.location.pathname.includes("product.html")) {
-        loadProductDetail(); // We are on the Detail Page
+       loadProductDetail(); 
     } else {
-        loadProducts(); // We are on the Home Page
-    }
+        loadProducts(); 
+        
+        // ⚠️ NEW: Check if we need to open the cart immediately
+        if (window.location.hash === "#cart") {
+            showCart(); // Open the cart view
+            window.history.replaceState({}, document.title, "."); // Clean the URL
+        }
 };
 
 // --- HELPER: Get Real User ID ---
@@ -160,11 +165,13 @@ async function loadProductDetail() {
             </div>
         `;
 
-        document.getElementById("product-detail-container").innerHTML = html;
+      document.getElementById("product-detail-container").innerHTML = html;
         
-        // Trigger Stock UI check to ensure buttons are disabled if cart is full
-        // (Wait a small moment for cart to load)
-        setTimeout(updateStockUI, 500);
+        // ⚠️ NEW: Force the Stock Text to update immediately
+        // We pass the specific product ID to be efficient
+        if (window.cartItems) {
+            updateStockUI(); 
+        }
 
     } catch (e) {
         console.error(e);
@@ -440,8 +447,15 @@ async function checkoutCart() {
 
 // --- NAVIGATION ---
 function showCart() { 
+    // If we are on the Product Detail page, go back to Home first!
+    if (window.location.pathname.includes("product.html")) {
+        window.location.href = "index.html#cart"; // Add #cart tag to URL
+        return;
+    }
+
+    // Normal behavior (on Home Page)
     document.getElementById("product-page").classList.add("hidden"); 
-    document.getElementById("cart-page").classList.remove("hidden"); 
+    document.getElementById("cart-page").classList.remove("hidden");
 }
 function showHome() { 
     document.getElementById("product-page").classList.remove("hidden"); 
