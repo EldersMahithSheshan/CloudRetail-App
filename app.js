@@ -183,16 +183,29 @@ async function loadProductDetail() {
 function addToCartWrapper(productId) {
     const product = window.allProducts.find(p => p.productId == productId);
     
-    // ⚠️ NEW: Check if Cart Quantity >= Stock
+    // Check Cart Limit
     const cartItem = window.cartItems ? window.cartItems.find(c => c.productId == productId) : null;
     const currentQty = cartItem ? cartItem.quantity : 0;
 
     if (product && currentQty >= product.stock) {
         alert(`❌ Max Limit Reached! \nWe only have ${product.stock} in stock.`);
-        return; // Stop here, don't add to cart
+        return;
     }
 
-    if (product) addToCart(product.productId, product.name, product.price);
+    // ✅ OPTIMISTIC UPDATE: Update the screen IMMEDIATELY (Before waiting for AWS)
+    if (product) {
+        // 1. Calculate new math locally
+        const newAvailable = product.stock - (currentQty + 1);
+        
+        // 2. Find the text element (Works on Home AND Product Page)
+        const stockEl = document.getElementById(`stock-${productId}`);
+        if (stockEl) {
+             stockEl.innerHTML = `<span style="color:green;">In Stock: ${newAvailable}</span> <span style="color:#888;font-size:0.8em;">(updating...)</span>`;
+        }
+
+        // 3. Send the real request
+        addToCart(product.productId, product.name, product.price);
+    }
 }
 
 function buyNowWrapper(productId) {
