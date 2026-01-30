@@ -15,6 +15,7 @@ let userToken = null;
 
 // --- INITIALIZE ---
 window.onload = async () => {
+    // 1. Auth Check
     const hash = window.location.hash;
     if (hash && hash.includes("id_token")) {
         const params = new URLSearchParams(hash.substring(1));
@@ -30,8 +31,15 @@ window.onload = async () => {
         return;
     }
 
-    loadProducts();
+    // 2. Always load Cart (so the counter works on both pages)
     loadCart(); 
+
+    // 3. ROUTING: Which page are we on?
+    if (window.location.pathname.includes("product.html")) {
+        loadProductDetail(); // We are on the Detail Page
+    } else {
+        loadProducts(); // We are on the Home Page
+    }
 };
 
 // --- HELPER: Get Real User ID ---
@@ -67,8 +75,11 @@ async function loadProducts() {
 
             return `
             <div class="card">
-                <img src="${imageSrc}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/250?text=No+Image'">
-                <h3>${p.name}</h3>
+                <a href="product.html?id=${p.productId}" style="text-decoration:none; color:inherit;">
+                    <img src="${imageSrc}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/250?text=No+Image'" style="cursor:pointer">
+                    <h3 style="cursor:pointer">${p.name}</h3>
+                </a>
+
                 <p>${p.description || ''}</p>
                 <div class="price">$${p.price}</div>
                 
@@ -88,6 +99,77 @@ async function loadProducts() {
             `;
         }).join('');
     } catch (e) { console.error("Error loading products:", e); }
+}
+
+// --- PRODUCT DETAIL PAGE LOGIC ---
+async function loadProductDetail() {
+    // 1. Get ID from URL
+    const params = new URLSearchParams(window.location.search);
+    const productId = params.get("id");
+
+    if (!productId) {
+        document.getElementById("loading").innerText = "Product Not Found";
+        return;
+    }
+
+    try {
+        // 2. Fetch Data (Reuse existing API)
+        const res = await fetch(PRODUCT_API_URL);
+        const data = await res.json();
+        const products = data.products ? data.products : data;
+        
+        // Save globally so Wrappers work
+        window.allProducts = products;
+
+        // 3. Find the specific product
+        const p = products.find(item => item.productId === productId);
+
+        if (!p) {
+            document.getElementById("loading").innerText = "Product Not Found";
+            return;
+        }
+
+        document.getElementById("loading").style.display = "none";
+
+        // 4. Render Details
+        const stockCount = (p.stock !== undefined) ? p.stock : 10;
+        const isOutOfStock = stockCount === 0;
+        const imageSrc = p.imageUrl ? p.imageUrl : 'https://via.placeholder.com/400';
+
+        const html = `
+            <div class="detail-image">
+                <img src="${imageSrc}" alt="${p.name}">
+            </div>
+            <div class="detail-info">
+                <h1>${p.name}</h1>
+                <p style="font-size:1.1em; color:#555; line-height:1.6;">${p.description}</p>
+                <div class="detail-price">$${p.price}</div>
+
+                <div id="stock-${p.productId}" style="margin-bottom:20px; font-size:1.2em;">
+                    ${isOutOfStock ? '<span style="color:red; font-weight:bold;">Out of Stock</span>' : `<span style="color:green;">In Stock: ${stockCount}</span>`}
+                </div>
+
+                <div style="display:flex; gap:10px;">
+                    <button id="btn-add-${p.productId}" class="add-btn" style="padding:15px 30px; font-size:1.1em;" onclick="addToCartWrapper('${p.productId}')" ${isOutOfStock ? 'disabled style="background-color:grey;"' : ''}>
+                         ${isOutOfStock ? 'Sold Out' : 'Add to Cart'}
+                    </button>
+                    <button id="btn-buy-${p.productId}" class="buy-btn" style="padding:15px 30px; font-size:1.1em;" onclick="buyNowWrapper('${p.productId}')" ${isOutOfStock ? 'disabled style="background-color:grey;"' : ''}>
+                         ${isOutOfStock ? 'Sold Out' : 'Buy Now ⚡'}
+                    </button>
+                </div>
+            </div>
+        `;
+
+        document.getElementById("product-detail-container").innerHTML = html;
+        
+        // Trigger Stock UI check to ensure buttons are disabled if cart is full
+        // (Wait a small moment for cart to load)
+        setTimeout(updateStockUI, 500);
+
+    } catch (e) {
+        console.error(e);
+        document.getElementById("loading").innerText = "Error loading details.";
+    }
 }
 
 // --- WRAPPERS (These fix the syntax errors) ---

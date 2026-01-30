@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Details - Cloud Retail</title>
+    <link rel="stylesheet" href="styles.css"> 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Temporary basic style for detail page until we do the UI Upgrade */
+        .detail-container { max-width: 800px; margin: 40px auto; padding: 20px; display: flex; gap: 40px; }
+        .detail-image img { width: 100%; max-width: 400px; border-radius: 10px; }
+        .detail-info { flex: 1; }
+        .detail-price { font-size: 2em; color: #2c3e50; font-weight: bold; margin: 20px 0; }
+        .back-btn { display: inline-block; margin: 20px; text-decoration: none; color: #333; }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">☁️ Cloud Retail</div>
+        <div class="nav-links">
+            <a href="index.html">Home</a>
+            <a href="#" onclick="showCart()">Cart (<span id="cart-count">0</span>)</a>
+            <button id="auth-btn" onclick="handleLogout()">Sign Out</button>
+        </div>
+    </nav>
+
+    <a href="index.html" class="back-btn">← Back to Products</a>
+
+    <div id="loading">Loading details...</div>
+    <div id="product-detail-container" class="detail-container">
+        </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
