@@ -66,8 +66,9 @@ function handleLogout() {
 // 1. PRODUCTS (Safe Version + Stock Logic)
 // ==========================================
 async function loadProducts() {
-    try {
-        const res = await fetch(PRODUCT_API_URL);
+   try {
+        // ⚠️ NEW: added { cache: "no-store" } to force fresh data
+        const res = await fetch(PRODUCT_API_URL, { cache: "no-store" });
         const data = await res.json();
         const products = data.products ? data.products : data; 
 
@@ -84,7 +85,6 @@ async function loadProducts() {
                     <img src="${imageSrc}" alt="${p.name}" onerror="this.src='https://via.placeholder.com/250?text=No+Image'" style="cursor:pointer">
                     <h3 style="cursor:pointer">${p.name}</h3>
                 </a>
-
                 <p>${p.description || ''}</p>
                 <div class="price">$${p.price}</div>
                 
@@ -119,7 +119,8 @@ async function loadProductDetail() {
 
     try {
         // 2. Fetch Data (Reuse existing API)
-        const res = await fetch(PRODUCT_API_URL);
+        
+        const res = await fetch(PRODUCT_API_URL, { cache: "no-store" });
         const data = await res.json();
         const products = data.products ? data.products : data;
         
@@ -218,27 +219,23 @@ function buyNowWrapper(productId) {
 // 2. CART FUNCTIONS
 // ==========================================
 async function addToCart(id, name, price) {
-    if (!userToken) return alert("Please login first");
+   if (!userToken) return alert("Please login first");
     const userId = getUserId(); 
 
     try {
-        console.log("Sending to Cart:", { userId, productId: id });
-
         const res = await fetch(CART_API_URL, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-                userId: userId, 
-                productId: id, 
-                name: name, 
-                price: price 
-            })
+            body: JSON.stringify({ userId, productId: id, name, price })
         });
 
         if (!res.ok) throw new Error("Server Error");
 
-        alert("✅ Added to Cart!");
-        loadCart(); 
+        // ⚠️ REMOVED: alert("✅ Added to Cart!"); 
+        // This allows the code to continue IMMEDIATELY
+        
+        console.log("Added to cart, refreshing UI...");
+        await loadCart(); // This will fix the "Updating..." text
 
     } catch (e) { 
         console.error("Add Cart Failed:", e);
