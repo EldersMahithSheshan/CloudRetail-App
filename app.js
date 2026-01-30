@@ -355,7 +355,7 @@ function updateStockUI() {
 // ==========================================
 
 async function buyNow(productId, productName, price, addressOverride = null) {
-    if (!userToken) { alert("Please Sign In first!"); return false; }
+   if (!userToken) { alert("Please Sign In first!"); return false; }
 
     const payload = JSON.parse(atob(userToken.split('.')[1]));
     const userName = payload['cognito:username'] || "Valued Customer";
@@ -379,8 +379,18 @@ async function buyNow(productId, productName, price, addressOverride = null) {
 
         if (res.ok) {
             const data = await res.json();
+            
+            // Only show alert and refresh if this is a SINGLE purchase
             if (!addressOverride) {
                 alert(`✅ Order Placed! \n\nOrder ID: ${data.orderId}\nCheck your email (${userEmail}) for the receipt.`);
+                
+                // ⚠️ NEW: Refresh the data instantly so stock updates!
+                if (window.location.pathname.includes("product.html")) {
+                     await loadProductDetail(); // Refresh Detail Page
+                } else {
+                     await loadProducts();      // Refresh Home Grid
+                     await loadCart();          // Ensure UI stays synced
+                }
             }
             return true; 
         } else {
