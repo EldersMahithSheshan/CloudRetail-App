@@ -123,28 +123,25 @@ async function loadProductDetail() {
     }
 
     try {
-        // 1. Fetch BOTH Products and Cart at the same time (Wait for both!)
+        // 1. Fetch BOTH Products and Cart
         const [productRes, cartRes] = await Promise.all([
             fetch(PRODUCT_API_URL, { cache: "no-store" }),
             fetch(`${CART_API_URL}?userId=${getUserId()}`, { cache: "no-store" })
         ]);
 
-        // 2. Process Products
         const prodData = await productRes.json();
         const products = prodData.products ? prodData.products : prodData;
         window.allProducts = products;
 
-        // 3. Process Cart (Set this BEFORE rendering HTML)
         const cartData = await cartRes.json();
         window.cartItems = cartData;
         
-        // Also update the Cart Counter in Header immediately
+        // Update Header Cart Count
         let totalCount = 0;
         cartData.forEach(item => totalCount += (item.quantity || 1));
         document.getElementById("cart-count").innerText = totalCount;
 
-
-        // 4. Find Product & Calculate REAL Stock
+        // 2. Find Main Product
         const p = products.find(item => item.productId === productId);
         if (!p) {
             document.getElementById("loading").innerText = "Product Not Found";
@@ -153,44 +150,74 @@ async function loadProductDetail() {
 
         document.getElementById("loading").style.display = "none";
 
-        // Calculate 'Available' based on DB Stock - Cart Quantity
+        // Logic for Main Product
         const cartItem = window.cartItems.find(c => c.productId === p.productId);
         const qtyInCart = cartItem ? cartItem.quantity : 0;
         const stockCount = (p.stock !== undefined) ? p.stock : 10;
-        const available = stockCount - qtyInCart; // <--- THE KEY FIX
-        
+        const available = stockCount - qtyInCart;
         const isOutOfStock = available <= 0;
         const imageSrc = p.imageUrl ? p.imageUrl : 'https://via.placeholder.com/400';
 
-        // 5. Render HTML with the CORRECT 'available' number immediately
+        // 3. Render Main Detail View
         const html = `
             <div class="detail-image">
                 <img src="${imageSrc}" alt="${p.name}">
             </div>
             <div class="detail-info">
                 <h1>${p.name}</h1>
-                <p style="font-size:1.1em; color:#555; line-height:1.6;">${p.description}</p>
                 <div class="detail-price">$${p.price}</div>
+                <p class="product-description">${p.description}</p>
 
-                <div id="stock-${p.productId}" style="margin-bottom:20px; font-size:1.2em;">
+                <div id="stock-${p.productId}" style="margin-bottom:25px; font-size:1.1em; font-weight:500;">
                     ${available <= 0 
                         ? '<span style="color:red; font-weight:bold;">Limit Reached</span>' 
-                        : `<span style="color:green;">In Stock: ${available}</span> <span style="color:#888;font-size:0.8em;">(${qtyInCart} in cart)</span>`
+                        : `<span style="color:#008000;">In Stock: ${available}</span> <span style="color:#888;font-size:0.8em;">(${qtyInCart} in cart)</span>`
                     }
                 </div>
 
-                <div style="display:flex; gap:10px;">
-                    <button id="btn-add-${p.productId}" class="add-btn" style="padding:15px 30px; font-size:1.1em;" onclick="addToCartWrapper('${p.productId}')" ${isOutOfStock ? 'disabled style="background-color:grey;"' : ''}>
+                <div class="btn-group" style="justify-content: start;">
+                    <button id="btn-add-${p.productId}" class="add-btn" style="padding:15px 40px;" onclick="addToCartWrapper('${p.productId}')" ${isOutOfStock ? 'disabled' : ''}>
                          ${isOutOfStock ? 'Max Added' : 'Add to Cart'}
                     </button>
-                    <button id="btn-buy-${p.productId}" class="buy-btn" style="padding:15px 30px; font-size:1.1em;" onclick="buyNowWrapper('${p.productId}')" ${isOutOfStock ? 'disabled style="background-color:grey;"' : ''}>
-                         ${isOutOfStock ? 'Max Added' : 'Buy Now ⚡'}
+                    <button id="btn-buy-${p.productId}" class="buy-btn" style="padding:15px 40px;" onclick="buyNowWrapper('${p.productId}')" ${isOutOfStock ? 'disabled' : ''}>
+                         ${isOutOfStock ? 'Max Added' : 'Buy Now'}
                     </button>
                 </div>
             </div>
         `;
-
         document.getElementById("product-detail-container").innerHTML = html;
+
+        // 4. Render "Related Products" (Excluding current item)
+        // We pick 4 random items that are NOT the current one
+        const related = products.filter(item => item.productId !== p.productId).slice(0, 4);
+        
+        document.getElementById("related-products-grid").innerHTML = related.map(rp => {
+            // Logic for Related Item Cards
+            const rStock = (rp.stock !== undefined) ? rp.stock : 10;
+            const rCartItem = window.cartItems.find(c => c.productId === rp.productId);
+            const rQty = rCartItem ? rCartItem.quantity : 0;
+            const rAvailable = rStock - rQty;
+            const rOut = rAvailable <= 0;
+            const rImg = rp.imageUrl ? rp.imageUrl : 'https://via.placeholder.com/250';
+
+            return `
+            <div class="card">
+                <a href="product.html?id=${rp.productId}" style="text-decoration:none; color:inherit;">
+                    <img src="${rImg}" alt="${rp.name}">
+                    <h3>${rp.name}</h3>
+                </a>
+                <div class="price">$${rp.price}</div>
+                <div id="stock-${rp.productId}" style="margin-bottom:10px; font-size:0.9em;">
+                    ${rOut ? '<span style="color:red; font-weight:bold;">Out of Stock</span>' : `<span style="color:green;">In Stock: ${rAvailable}</span>`}
+                </div>
+                <div class="btn-group">
+                    <button id="btn-add-${rp.productId}" class="add-btn" onclick="addToCartWrapper('${rp.productId}')" ${rOut ? 'disabled' : ''}>Add</button>
+                    <button id="btn-buy-${rp.productId}" class="buy-btn" onclick="buyNowWrapper('${rp.productId}')" ${rOut ? 'disabled' : ''}>Buy</button>
+                </div>
+            </div>
+            `;
+        }).join('');
+
 
     } catch (e) {
         console.error(e);

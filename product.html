@@ -3,36 +3,97 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Product Details - Cloud Retail</title>
-    <link rel="stylesheet" href="styles.css"> 
+    <title>Product Details | Electro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        /* Temporary basic style for detail page until we do the UI Upgrade */
-        .detail-container { max-width: 800px; margin: 40px auto; padding: 20px; display: flex; gap: 40px; }
-        .detail-image img { width: 100%; max-width: 400px; border-radius: 10px; }
-        .detail-info { flex: 1; }
-        .detail-price { font-size: 2em; color: #2c3e50; font-weight: bold; margin: 20px 0; }
-        .back-btn { display: inline-block; margin: 20px; text-decoration: none; color: #333; }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
-    <nav>
-        <div class="logo">☁️ Cloud Retail</div>
-    <div class="nav-links">
-        <a href="store.html">Home</a>
-        
-        <a href="store.html">Cart (<span id="cart-count">0</span>)</a>
-        
-        <button id="auth-btn" onclick="handleLogout()">Sign Out</button>
+    <div id="top-header">
+        <div class="container">
+            <ul class="header-links left">
+                <li><a href="#"><i class="fa fa-phone"></i> +021-95-51-84</a></li>
+                <li><a href="#"><i class="fa fa-envelope"></i> email@email.com</a></li>
+            </ul>
+            <ul class="header-links right">
+                <li><a href="#" onclick="handleLogout()"><i class="fa fa-user"></i> Sign Out</a></li>
+            </ul>
+        </div>
     </div>
+
+    <div id="header">
+        <div class="container">
+            <div class="header-row">
+                <div class="col-logo">
+                    <a href="store.html" class="logo">Electro<span class="dot">.</span></a>
+                </div>
+                <div class="col-search">
+                    <div class="header-search">
+                        <select class="input-select"><option>All Categories</option></select>
+                        <input class="input" placeholder="Search here">
+                        <button class="search-btn">Search</button>
+                    </div>
+                </div>
+                <div class="col-cart">
+                    <div class="header-ctn">
+                        <div class="dropdown">
+                            <a href="store.html#cart">
+                                <i class="fa fa-shopping-cart"></i>
+                                <span>Your Cart</span>
+                                <div class="qty" id="cart-count">0</div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav id="navigation">
+        <div class="container">
+            <div id="responsive-nav">
+                <ul class="main-nav">
+                    <li><a href="store.html">Home</a></li>
+                    <li><a href="#">Categories</a></li>
+                    <li><a href="#">Laptops</a></li>
+                    <li><a href="#">Accessories</a></li>
+                </ul>
+            </div>
+        </div>
     </nav>
 
-    <a href="store.html" class="back-btn">← Back to Products</a>
-
-    <div id="loading">Loading details...</div>
-    <div id="product-detail-container" class="detail-container">
+    <div id="breadcrumb" class="section">
+        <div class="container">
+            <ul class="breadcrumb-tree">
+                <li><a href="store.html">Home</a></li>
+                <li class="active">Product Details</li>
+            </ul>
         </div>
+    </div>
+
+    <div class="section">
+        <div class="container">
+            
+            <div id="loading" style="text-align:center; padding:50px;">Loading details...</div>
+            
+            <div id="product-detail-container" class="product-details-row">
+                </div>
+
+            <div class="section-title" style="margin-top: 60px;">
+                <h3 class="title">Related Products</h3>
+            </div>
+            <div id="related-products-grid" class="grid-electro">
+                </div>
+
+        </div>
+    </div>
+
+    <footer id="footer">
+        <div class="container">
+            <p>&copy; 2026 Electro. All Rights Reserved.</p>
+        </div>
+    </footer>
 
     <script src="app.js"></script>
 </body>

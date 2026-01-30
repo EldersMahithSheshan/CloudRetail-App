@@ -3,16 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to Cloud Retail</title>
+    <title>Welcome | Electro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
-    <div class="landing-container">
-        <div class="landing-content">
-            <h1>☁️ Cloud Retail</h1>
-            <p>Please log in to access the store.</p>
-            <button class="landing-btn" onclick="handleLogin()">Log In to Shop</button>
+<body class="landing-body">
+
+    <div class="landing-wrapper">
+        <div class="landing-logo">
+            Electro<span class="dot">.</span>
         </div>
+        <h1>Welcome to Cloud Retail</h1>
+        <p>Your one-stop shop for tech and gadgets.</p>
+        <p class="sub-text">Please log in to access exclusive deals.</p>
+        
+        <button class="primary-btn landing-btn" onclick="handleLogin()">Log In to Shop</button>
     </div>
 
     <script>
@@ -20,8 +25,7 @@
         const COGNITO_DOMAIN = "https://eu-north-15qqenyeuq.auth.eu-north-1.amazoncognito.com";
         const CLIENT_ID = "7ruffih541m75ibvhbg5gamtle"; 
         
-        // REDIRECT TO THE STORE PAGE AFTER LOGIN
-        // This calculates your current URL and adds "store.html" to the end
+        // REDIRECT TO THE STORE PAGE (store.html)
         const REDIRECT_URI = window.location.origin + "/store.html"; 
 
         function handleLogin() {
