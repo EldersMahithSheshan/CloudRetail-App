@@ -3,39 +3,161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shop | Cloud Retail</title>
-    <link rel="stylesheet" href="styles.css">
+    <title>Electro | Cloud Retail</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <nav class="navbar">
-        <div class="logo">☁️ Cloud Retail</div>
-        <div class="nav-links">
-            <a href="#" onclick="showHome()">Products</a>
-            <a href="#" onclick="showCart()">Cart (<span id="cart-count">0</span>)</a>
-            <button id="auth-btn" onclick="handleLogout()">Sign Out</button>
+
+    <div id="top-header">
+        <div class="container">
+            <ul class="header-links left">
+                <li><a href="#"><i class="fa fa-phone"></i> +021-95-51-84</a></li>
+                <li><a href="#"><i class="fa fa-envelope"></i> email@email.com</a></li>
+                <li><a href="#"><i class="fa fa-map-marker"></i> 1734 Stonecoal Road</a></li>
+            </ul>
+            <ul class="header-links right">
+                <li><a href="#"><i class="fa fa-dollar"></i> USD</a></li>
+                <li><a href="#" onclick="handleLogout()"><i class="fa fa-user"></i> Sign Out</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="header">
+        <div class="container">
+            <div class="header-row">
+                <div class="col-logo">
+                    <a href="#" onclick="showHome()" class="logo">
+                        Electro<span class="dot">.</span>
+                    </a>
+                </div>
+
+                <div class="col-search">
+                    <div class="header-search">
+                        <select class="input-select">
+                            <option value="0">All Categories</option>
+                            <option value="1">Laptops</option>
+                            <option value="1">Smartphones</option>
+                        </select>
+                        <input class="input" placeholder="Search here">
+                        <button class="search-btn">Search</button>
+                    </div>
+                </div>
+
+                <div class="col-cart">
+                    <div class="header-ctn">
+                        <div class="dropdown">
+                            <a href="#">
+                                <i class="fa fa-heart-o"></i>
+                                <span>Your Wishlist</span>
+                                <div class="qty">2</div>
+                            </a>
+                        </div>
+                        
+                        <div class="dropdown" onclick="showCart()">
+                            <a href="#">
+                                <i class="fa fa-shopping-cart"></i>
+                                <span>Your Cart</span>
+                                <div class="qty" id="cart-count">0</div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <nav id="navigation">
+        <div class="container">
+            <div id="responsive-nav">
+                <ul class="main-nav">
+                    <li class="active"><a href="#" onclick="showHome()">Home</a></li>
+                    <li><a href="#">Hot Deals</a></li>
+                    <li><a href="#">Categories</a></li>
+                    <li><a href="#">Laptops</a></li>
+                    <li><a href="#">Smartphones</a></li>
+                    <li><a href="#">Cameras</a></li>
+                    <li><a href="#">Accessories</a></li>
+                </ul>
+            </div>
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container section">
+        
         <div id="product-page">
-            <header class="hero">
-                <h1>Sky High Quality</h1>
-            </header>
-            <div id="product-grid" class="grid">
+            
+            <div class="shop-collections">
+                <div class="shop-card">
+                    <div class="shop-img">
+                        <div class="overlay-red"></div>
+                        <img src="https://via.placeholder.com/300x200?text=Laptops" alt="">
+                    </div>
+                    <div class="shop-body">
+                        <h3>Laptop<br>Collection</h3>
+                        <a href="#" class="cta-btn">Shop now <i class="fa fa-arrow-circle-right"></i></a>
+                    </div>
+                </div>
+                 <div class="shop-card">
+                    <div class="shop-img">
+                        <div class="overlay-red"></div>
+                        <img src="https://via.placeholder.com/300x200?text=Accessories" alt="">
+                    </div>
+                    <div class="shop-body">
+                        <h3>Accessories<br>Collection</h3>
+                        <a href="#" class="cta-btn">Shop now <i class="fa fa-arrow-circle-right"></i></a>
+                    </div>
+                </div>
+                 <div class="shop-card">
+                    <div class="shop-img">
+                        <div class="overlay-red"></div>
+                        <img src="https://via.placeholder.com/300x200?text=Cameras" alt="">
+                    </div>
+                    <div class="shop-body">
+                        <h3>Cameras<br>Collection</h3>
+                        <a href="#" class="cta-btn">Shop now <i class="fa fa-arrow-circle-right"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <h3 class="title">New Products</h3>
+                <div class="section-nav">
+                    <ul class="section-tab-nav">
+                        <li class="active"><a data-toggle="tab" href="#tab1">Laptops</a></li>
+                        <li><a data-toggle="tab" href="#tab1">Smartphones</a></li>
+                        <li><a data-toggle="tab" href="#tab1">Cameras</a></li>
+                        <li><a data-toggle="tab" href="#tab1">Accessories</a></li>
+                    </ul>
+                </div>
+            </div>
+
+            <div id="product-grid" class="grid-electro">
                 <div class="loading">Loading products...</div>
             </div>
         </div>
 
         <div id="cart-page" class="hidden">
-            <h2>Your Shopping Cart</h2>
+            <div class="section-title">
+                <h3 class="title">Your Shopping Cart</h3>
+            </div>
             <div id="cart-items" class="cart-list"></div>
-            <h3>Total: $<span id="cart-total">0.00</span></h3>
-            <button id="checkout-btn" class="buy-btn" onclick="checkoutCart()" style="width:100%; margin-top:20px;">
-    Proceed to Checkout
-</button>
+            <div class="cart-summary">
+                <h3>Total: $<span id="cart-total">0.00</span></h3>
+                <button id="checkout-btn" class="primary-btn" onclick="checkoutCart()">
+                    Proceed to Checkout
+                </button>
+            </div>
         </div>
+
     </div>
+
+    <footer id="footer">
+        <div class="container">
+            <p>&copy; 2026 Electro. All Rights Reserved.</p>
+        </div>
+    </footer>
 
     <script src="app.js"></script>
 </body>
