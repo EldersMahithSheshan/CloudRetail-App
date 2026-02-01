@@ -381,18 +381,89 @@ function updateStockUI() {
 // 3. ORDER & CHECKOUT ENGINE
 // ==========================================
 
-async function buyNow(productId, productName, price, addressOverride = null) {
+// --- MODAL LOGIC ---
+function openAddressModal(callback) {
+    const modal = document.getElementById("electro-modal");
+    if (!modal) return alert("Error: Modal HTML missing"); // Safety check
+
+    document.getElementById("modal-title").innerText = "Shipping Address";
+    document.getElementById("modal-message").innerText = "Please enter your delivery address:";
+    
+    const input = document.getElementById("modal-input");
+    input.style.display = "block";
+    input.value = "APIIT City Campus, Colombo"; // Default Value
+    input.focus();
+    
+    const btn = document.getElementById("modal-confirm-btn");
+    btn.innerText = "Place Order";
+    
+    // Remove old event listeners by cloning
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+    
+    newBtn.onclick = () => {
+        if(input.value.length < 5) return alert("Please enter a valid address");
+        closeModal();
+        callback(input.value);
+    };
+
+    modal.style.display = "flex";
+}
+
+function openSuccessModal(orderId) {
+    const modal = document.getElementById("electro-modal");
+    document.getElementById("modal-title").innerText = "Order Confirmed! 🎉";
+    
+    const msg = document.getElementById("modal-message");
+    msg.innerHTML = `Your order has been placed successfully.<br><br><strong>Order ID:</strong> ${orderId}<br><br>Check your email for the receipt.`;
+    
+    document.getElementById("modal-input").style.display = "none";
+    
+    const btn = document.getElementById("modal-confirm-btn");
+    btn.innerText = "Continue Shopping";
+    
+    // Remove old event listeners
+    const newBtn = btn.cloneNode(true);
+    btn.parentNode.replaceChild(newBtn, btn);
+
+    newBtn.onclick = () => {
+        closeModal();
+        // Refresh page to update stock UI
+        if (window.location.pathname.includes("product.html")) {
+             loadProductDetail();
+        } else {
+             loadProducts();
+             loadCart();
+        }
+    };
+
+    modal.style.display = "flex";
+}
+
+function closeModal() {
+    const modal = document.getElementById("electro-modal");
+    if (modal) modal.style.display = "none";
+}
+
+// --- BUY FUNCTIONS ---
+
+function buyNowWrapper(productId) {
+    const product = window.allProducts.find(p => p.productId == productId);
+    if (!product) return;
+    
+    // Open Modal first, THEN call buyNow
+    openAddressModal((address) => {
+        buyNow(product.productId, product.name, product.price, address);
+    });
+}
+
+async function buyNow(productId, productName, price, address, silentMode = false) {
    if (!userToken) { alert("Please Sign In first!"); return false; }
 
+    // Decode User Info
     const payload = JSON.parse(atob(userToken.split('.')[1]));
     const userName = payload['cognito:username'] || "Valued Customer";
     const userEmail = payload['email'];
-
-    let address = addressOverride;
-    if (!address) { address = prompt("📦 Please enter your Shipping Address:", "APIIT City Campus, Colombo"); }
-    if (!address) return false; 
-    
-    if (!addressOverride && !confirm(`Confirm purchase of ${productName} for $${price}?`)) return false;
 
     try {
         const res = await fetch(ORDER_API_URL, {
@@ -407,22 +478,16 @@ async function buyNow(productId, productName, price, addressOverride = null) {
         if (res.ok) {
             const data = await res.json();
             
-            // Only show alert and refresh if this is a SINGLE purchase
-            if (!addressOverride) {
-                alert(`✅ Order Placed! \n\nOrder ID: ${data.orderId}\nCheck your email (${userEmail}) for the receipt.`);
-                
-                // ⚠️ NEW: Refresh the data instantly so stock updates!
-                if (window.location.pathname.includes("product.html")) {
-                     await loadProductDetail(); // Refresh Detail Page
-                } else {
-                     await loadProducts();      // Refresh Home Grid
-                     await loadCart();          // Ensure UI stays synced
-                }
+            // If silentMode is true (for bulk checkout), we don't show a popup for every single item
+            if (!silentMode) {
+                openSuccessModal(data.orderId); 
             }
             return true; 
         } else {
             const err = await res.text();
             console.error("Order Failed:", err);
+            // We use alert here for errors because they are rare/critical
+            alert("❌ Order Failed: " + err); 
             return false;
         }
     } catch (e) { 
@@ -434,46 +499,42 @@ async function buyNow(productId, productName, price, addressOverride = null) {
 async function checkoutCart() {
     if (!userToken) return;
     const userId = getUserId();
-
+    
+    // 1. Get Cart Items
     const res = await fetch(`${CART_API_URL}?userId=${userId}`, { method: "GET", cache: "no-store" });
     const items = await res.json();
-
     if (items.length === 0) return alert("Your cart is empty!");
 
-    const address = prompt("📦 Enter Shipping Address for ALL items:", "APIIT City Campus, Colombo");
-    if (!address) return;
+    // 2. Open Address Modal ONCE for the whole cart
+    openAddressModal(async (address) => {
+        const btn = document.getElementById("checkout-btn");
+        if(btn) btn.innerText = "Processing...";
 
-    let successCount = 0;
-    const btn = document.getElementById("checkout-btn"); 
-    if(btn) btn.innerText = "Processing...";
-
-    for (const item of items) {
-        const qty = item.quantity || 1;
-        for (let i = 0; i < qty; i++) {
-             const success = await buyNow(item.productId, item.name, item.price, address);
-             if (success) successCount++;
-        }
-    }
-
-    if(btn) btn.innerText = "Proceed to Checkout";
-
-    if (successCount > 0) {
-        alert(`✅ Checkout Complete! ${successCount} items ordered.\nCheck your email for receipts.`);
+        let successCount = 0;
+        
+        // 3. Loop through items and buy them
         for (const item of items) {
-            await fetch(`${CART_API_URL}?userId=${userId}&productId=${item.productId}`, { method: "DELETE" });
+            const qty = item.quantity || 1;
+            for (let i = 0; i < qty; i++) {
+                 // Pass "true" as last argument to suppress individual success popups
+                 const success = await buyNow(item.productId, item.name, item.price, address, true);
+                 if (success) successCount++;
+            }
         }
         
-        // Refresh EVERYTHING correctly
-        if (window.location.pathname.includes("product.html")) {
-             await loadProductDetail();
+        // 4. Clear Cart & Show Success
+        if (successCount > 0) {
+            for (const item of items) {
+                await fetch(`${CART_API_URL}?userId=${userId}&productId=${item.productId}`, { method: "DELETE" });
+            }
+            // Show one big success message
+            openSuccessModal(`Bulk-Order-${Date.now().toString().slice(-4)}`); 
         } else {
-             await loadProducts();
-             await loadCart();
+            alert("Checkout failed. Items might be out of stock.");
         }
-        
-    } else {
-        alert("❌ Checkout failed. Items might be out of stock.");
-    }
+
+        if(btn) btn.innerText = "Proceed to Checkout";
+    });
 }
 
 function showCart() { 
@@ -484,6 +545,7 @@ function showCart() {
     document.getElementById("product-page").classList.add("hidden"); 
     document.getElementById("cart-page").classList.remove("hidden");
 }
+
 function showHome() { 
     document.getElementById("product-page").classList.remove("hidden"); 
     document.getElementById("cart-page").classList.add("hidden"); 
