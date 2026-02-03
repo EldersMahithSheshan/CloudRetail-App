@@ -458,21 +458,27 @@ function buyNowWrapper(productId) {
 }
 
 async function buyNow(productId, productName, price, address, silentMode = false) {
-   if (!userToken) { alert("Please Sign In first!"); return false; }
+    if (!userToken) { alert("Please Sign In first!"); return false; }
 
     // Decode User Info
     const payload = JSON.parse(atob(userToken.split('.')[1]));
-    const userName = payload['cognito:username'] || "Valued Customer";
+    
+    // ✅ CHANGE 1: Extract a friendly name from email (e.g. "sheshan" from "sheshan@gmail.com")
+    let niceName = "Valued Customer";
+    if (payload['email']) {
+        niceName = payload['email'].split('@')[0];
+    }
+    const userName = niceName; 
+    
     const userEmail = payload['email'];
 
     try {
         const res = await fetch(ORDER_API_URL, {
             method: "POST",
+            // ✅ CHANGE 2: Add the Authorization header (The Security Key)
             headers: { 
-                
-                "Content-Type": "application/json" 
-
-
+                "Content-Type": "application/json",
+                "Authorization": userToken 
             },
             body: JSON.stringify({ 
                 productId: productId, name: productName, price: price,
@@ -483,7 +489,7 @@ async function buyNow(productId, productName, price, address, silentMode = false
         if (res.ok) {
             const data = await res.json();
             
-            // If silentMode is true (for bulk checkout), we don't show a popup for every single items
+            // If silentMode is true (for bulk checkout), we don't show a popup for every single item
             if (!silentMode) {
                 openSuccessModal(data.orderId); 
             }
