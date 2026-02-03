@@ -491,7 +491,7 @@ async function buyNow(productId, productName, price, address, silentMode = false
         } else {
             const err = await res.text();
             console.error("Order Failed:", err);
-            // We use alert here for errors because they are rare/criticals
+            // We use alert here for errors because they are rare/critical
             alert("❌ Order Failed: " + err); 
             return false;
         }
