@@ -555,3 +555,5 @@ function showHome() {
     document.getElementById("product-page").classList.remove("hidden"); 
     document.getElementById("cart-page").classList.add("hidden"); 
 }
+
+// Force AWS Rebuild
