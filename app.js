@@ -478,7 +478,7 @@ async function buyNow(productId, productName, price, address, silentMode = false
             // ✅ CHANGE 2: Add the Authorization header (The Security Key)
             headers: { 
                 "Content-Type": "application/json",
-                "Authorization": userToken 
+                "Authorization": `Bearer ${userToken}`
             },
             body: JSON.stringify({ 
                 productId: productId, name: productName, price: price,
