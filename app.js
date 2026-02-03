@@ -483,7 +483,7 @@ async function buyNow(productId, productName, price, address, silentMode = false
         if (res.ok) {
             const data = await res.json();
             
-            // If silentMode is true (for bulk checkout), we don't show a popup for every single item
+            // If silentMode is true (for bulk checkout), we don't show a popup for every single items
             if (!silentMode) {
                 openSuccessModal(data.orderId); 
             }
