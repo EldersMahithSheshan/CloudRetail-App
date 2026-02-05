@@ -7,6 +7,8 @@ const CART_API_URL = "https://7fqnwxqun1.execute-api.eu-north-1.amazonaws.com/ca
 const ORDER_API_URL = "https://qidmv28lt5.execute-api.eu-north-1.amazonaws.com/default/OrderService";
 const PRODUCT_API_URL = "https://pvz4zn2pff.execute-api.eu-north-1.amazonaws.com/default/ProductService"; 
 
+const S3_BUCKET_URL = "https://cloudretail-images-cloudretail.s3.eu-north-1.amazonaws.com/";
+
 const COGNITO_DOMAIN = "https://eu-north-15qqenyeuq.auth.eu-north-1.amazoncognito.com";
 const CLIENT_ID = "7ruffih541m75ibvhbg5gamtle"; 
 const LOGIN_PAGE = window.location.origin + "/index.html"; 
@@ -77,7 +79,11 @@ async function loadProducts() {
         document.getElementById("product-grid").innerHTML = products.map(p => {
             const stockCount = (p.stock !== undefined) ? p.stock : 10;
             const isOutOfStock = stockCount === 0;
-            const imageSrc = p.imageUrl ? p.imageUrl : 'https://via.placeholder.com/250';
+            let imageSrc = 'https://via.placeholder.com/250';
+if (p.imageUrl) {
+    // This swaps "images/laptop.jpg" -> "https://...s3.../laptop.jpg"
+    imageSrc = p.imageUrl.replace('images/', S3_BUCKET_URL);
+}
 
             return `
             <div class="card">
@@ -156,7 +162,10 @@ async function loadProductDetail() {
         const stockCount = (p.stock !== undefined) ? p.stock : 10;
         const available = stockCount - qtyInCart;
         const isOutOfStock = available <= 0;
-        const imageSrc = p.imageUrl ? p.imageUrl : 'https://via.placeholder.com/400';
+        let imageSrc = 'https://via.placeholder.com/400';
+if (p.imageUrl) {
+    imageSrc = p.imageUrl.replace('images/', S3_BUCKET_URL);
+}
 
         // 3. Render Main Detail View
         const html = `
